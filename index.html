@@ -227,8 +227,6 @@
         .bubble-code { background: #ffffff; color: #334155; font-family: monospace; font-size: 12px; border: 1px solid #e2e8f0; }
         .toolbar { height: 44px; background: #ecf1f8; border-top: 1px solid #94a3b8; display: flex; align-items: center; padding: 0 16px; gap: 20px; font-size: 22px; flex-shrink: 0; color:#444;}
         #global-keyboard-container { width: 100%; background: #ecf1f8; flex-shrink: 0; display: flex; flex-direction: column; }
-        
-        #global-keyboard-container { width: 100%; background: #ecf1f8; flex-shrink: 0; position: relative; }
         .phone-dom-key { 
             cursor: pointer; z-index: 2; transition: transform 0.05s, background-color 0.1s; 
             border-radius: 8px; box-sizing: border-box; 
@@ -986,7 +984,27 @@
             const pCtx = phoneCanvas.getContext('2d');
             pCtx.clearRect(0, 0, phoneCanvas.width, phoneCanvas.height);
             const TOOLBAR_H_HD = 44 * HD_SCALE; 
+            
             pCtx.drawImage(canvas, PADDING, PADDING + TOOLBAR_H_HD, canvas.width - PADDING * 2, canvas.height - PADDING * 2 - TOOLBAR_H_HD, 0, 0, phoneCanvas.width, phoneCanvas.height);
+        }        
+        const toolbarDiv = document.querySelector('.toolbar');
+        if (toolbarDiv) {
+            const tCan = document.createElement('canvas');
+            const TOOLBAR_H_HD = 44 * HD_SCALE;
+            tCan.width = canvas.width - PADDING * 2;
+            tCan.height = TOOLBAR_H_HD;
+            const tCtx = tCan.getContext('2d');
+                        
+            tCtx.drawImage(canvas, 
+                PADDING, PADDING, tCan.width, tCan.height,
+                0, 0, tCan.width, tCan.height
+            );
+            
+            toolbarDiv.style.backgroundImage = `url(${tCan.toDataURL()})`;
+            toolbarDiv.style.backgroundSize = '100% 100%';
+            toolbarDiv.style.borderTop = 'none'; 
+            toolbarDiv.style.color = '#fff'; 
+            toolbarDiv.style.textShadow = '0 1px 3px rgba(0,0,0,0.8)'; 
         }
     }
     
