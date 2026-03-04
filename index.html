@@ -1,0 +1,1200 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>键帽工坊 - 测试</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geom:ital,wght@0,300..900;1,300..900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg-dark: #0C0F13;
+            --panel-bg: #151A21;
+            --card-bg: #1E252E;
+            --accent-primary: #FF8A6B;
+            --accent-secondary: #FFB88C;
+            --text-light: #EFF3F8;
+            --text-dim: #9AA9B9;
+            --border-glow: rgba(255, 138, 107, 0.3);
+            --shadow-heavy: 0 15px 35px -10px rgba(0, 0, 0, 0.9);
+            --transition-smooth: all 0.2s cubic-bezier(0.2, 0.9, 0.3, 1);
+        }
+
+        body {
+            margin: 0; background: var(--bg-dark); color: var(--text-light);
+            font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+            display: flex; height: 100vh; overflow: hidden; letter-spacing: 0.02em;
+        }
+
+        .sidebar {
+            width: 480px; background: var(--panel-bg);
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex; flex-direction: column; z-index: 20;
+            box-shadow: 8px 0 30px rgba(0, 0, 0, 0.8); backdrop-filter: blur(2px);
+        }
+
+        .header {
+            padding: 24px 22px; border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            background: linear-gradient(145deg, #1C232C, #13181F); position: relative;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .header::after {
+            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent-primary), transparent);
+        }
+        .header h2 {
+            margin: 0; font-weight: 700; font-size: 1.4rem;
+            background: linear-gradient(135deg, #fff, var(--accent-secondary));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            display: flex; align-items: center; gap: 12px;
+        }
+        .header h2 i {
+            background: rgba(255, 138, 107, 0.15); padding: 10px; border-radius: 12px;
+            color: var(--accent-primary); font-size: 1.3rem; -webkit-text-fill-color: initial;
+        }
+
+        .controls {
+            flex: 1; overflow-y: auto; padding: 18px 16px;
+            scrollbar-width: thin; scrollbar-color: var(--accent-primary) var(--card-bg);
+        }
+        .controls::-webkit-scrollbar { width: 8px; }
+        .controls::-webkit-scrollbar-track { background: var(--card-bg); border-radius: 12px; }
+        .controls::-webkit-scrollbar-thumb { background: var(--accent-primary); border-radius: 12px; }
+
+        details {
+            background: var(--card-bg); border-radius: 18px; margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.04); box-shadow: 0 8px 20px -8px rgba(0, 0, 0, 0.6);
+            overflow: hidden; transition: var(--transition-smooth);
+        }
+        details:hover { border-color: var(--border-glow); box-shadow: 0 10px 25px -6px rgba(255, 138, 107, 0.2); }
+        summary {
+            padding: 18px 22px; font-weight: 600; font-size: 1.1rem; cursor: pointer;
+            background: rgba(0, 0, 0, 0.2); user-select: none; color: var(--text-light);
+            display: flex; align-items: center; gap: 14px; border-bottom: 1px solid transparent;
+        }
+        summary i.icon-main { color: var(--accent-primary); font-size: 1.3rem; width: 30px; text-align: center; }
+        details[open] summary { background: rgba(255, 138, 107, 0.08); border-bottom-color: rgba(255, 138, 107, 0.2); }
+        summary::-webkit-details-marker { display: none; }
+        summary::after {
+            content: '\f078'; font-family: 'Font Awesome 6 Free'; font-weight: 900;
+            margin-left: auto; font-size: 0.9rem; color: var(--accent-primary); transition: transform 0.3s;
+        }
+        details[open] summary::after { transform: rotate(180deg); }
+        .detail-content { padding: 18px 20px; display: grid; gap: 16px; background: rgba(0, 0, 0, 0.15); }
+
+        .ctrl-row {
+            display: flex; align-items: center; justify-content: space-between; gap: 16px;
+            background: rgba(0,0,0,0.25); padding: 10px 14px 10px 18px; border-radius: 14px;
+            border: 1px solid rgba(255,255,255,0.03); margin-bottom: 4px;
+        }
+        .ctrl-row label { font-size: 0.95rem; font-weight: 600; color: #E2E8F0; flex: 1; display: flex; align-items: center; gap: 8px; }
+        
+        input[type="range"] {
+            flex: 2; height: 8px; background: linear-gradient(90deg, var(--accent-primary) 0%, #4d3a32 100%);
+            border-radius: 20px; appearance: none; outline: none; cursor: pointer;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            appearance: none; width: 24px; height: 24px; background: white; border-radius: 50%;
+            border: 2px solid var(--accent-primary); margin-top: -8px; transition: 0.1s; box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+        }
+        input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); background: var(--accent-primary); }
+        
+        .val-disp { font-size: 0.95rem; color: var(--accent-primary); width: 55px; text-align: right; font-family: monospace; font-weight: 600; background: rgba(0,0,0,0.5); padding: 6px 8px; border-radius: 8px; border: 1px solid rgba(255,138,107,0.3); }
+
+        input[type="color"] { width: 44px; height: 44px; border: none; background: transparent; cursor: pointer; padding: 2px; border-radius: 12px; }
+        input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+        input[type="color"]::-webkit-color-swatch { border: none; border-radius: 10px; }
+
+        select, input[type="file"], input[type="text"] {
+            background: #1B222B; color: var(--text-light); border: 1px solid #33404D;
+            padding: 10px 16px; border-radius: 10px; font-size: 0.95rem; outline: none; cursor: pointer; width: 100%;
+        }
+        select { appearance: none; background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%23FF8A6B" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>'); background-repeat: no-repeat; background-position: right 14px center; background-size: 16px; }
+        input[type="file"]::-webkit-file-upload-button { background: var(--accent-primary); color: #000; border: none; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-right: 10px; }
+
+        .btn { background: #28313E; color: var(--text-light); border: 1px solid #405368; padding: 10px 16px; border-radius: 10px; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: var(--transition-smooth); display: flex; align-items: center; gap: 8px; justify-content: center; }
+        .btn:hover { background: #364758; border-color: var(--accent-primary); color: var(--accent-primary); }
+        .btn-primary { background: linear-gradient(135deg, var(--accent-primary), #E06040); color: #000; border: none; }
+        .btn-primary:hover { background: linear-gradient(135deg, #FF9F82, #FF7A5A); box-shadow: 0 6px 20px rgba(255, 138, 107, 0.4); transform: translateY(-2px); color:#000; }
+
+        .bottom-actions { display: flex; gap: 12px; padding: 20px; background: #10161C; border-top: 1px solid rgba(255,255,255,0.04); }
+        .bottom-actions .btn { flex: 1; padding: 14px; font-size: 1rem; }
+
+        .data-row { display: flex; justify-content: space-between; padding: 6px 12px; background: rgba(0,0,0,0.2); border-radius: 8px; font-size: 0.8rem; }
+        .data-label { color: var(--text-dim); }
+        .data-val { color: var(--accent-secondary); font-family: monospace; font-weight: 600; }
+        hr { border: 0; border-top: 1px solid rgba(255,255,255,0.1); margin: 6px 0; }
+
+        .locked-feature {
+            opacity: 0.4;
+            pointer-events: none;
+            user-select: none;
+            filter: grayscale(100%);
+            position: relative;
+        }
+        .lock-icon {
+            color: #ff4757;
+            cursor: help;
+            margin-left: 5px;
+            pointer-events: auto;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .header-action-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(30, 37, 46, 0.8);
+            backdrop-filter: blur(8px);
+            padding: 8px 14px;
+            border-radius: 40px;
+            color: var(--text-light);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            border: 1px solid rgba(255, 138, 107, 0.3);
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            letter-spacing: 0.3px;
+        }
+
+        .header-action-btn i {
+            font-size: 1.1rem;
+            color: var(--accent-primary);
+        }
+
+        .header-action-btn:hover {
+            background: var(--accent-primary);
+            color: #0C0F13;
+            border-color: var(--accent-primary);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(255, 138, 107, 0.5);
+        }
+
+        .header-action-btn:hover i {
+            color: #0C0F13;
+        }
+
+        /* ----- 右侧预览区----- */
+        .main-content {
+            flex: 1; display: flex; flex-direction: column; position: relative;
+            background: radial-gradient(circle at 50% 30%, #2C313A 0%, #0B0D10 100%);
+        }
+
+        .view-tabs {
+            position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+            display: flex; background: rgba(0,0,0,0.4); padding: 6px; border-radius: 40px;
+            border: 1px solid rgba(255,255,255,0.1); z-index: 50; backdrop-filter: blur(10px);
+        }
+        .tab-btn {
+            background: transparent; border: none; color: var(--text-dim); padding: 8px 24px;
+            border-radius: 30px; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: 0.3s;
+            display: flex; align-items: center; gap: 8px; outline: none;
+        }
+        .tab-btn.active { background: var(--accent-primary); color: #000; box-shadow: 0 4px 15px rgba(255, 138, 107, 0.4); }
+
+        .view-container { flex: 1; display: flex; align-items: center; justify-content: center; overflow: auto; padding: 80px 20px 20px 20px; width: 100%; height: 100%; position: absolute; top:0; left:0; }
+        
+        #view-phone { display: flex; }
+        .phone-mockup {
+            width: 375px; height: 833px; background: #f1f5f9; border: 8px solid #1f293a;
+            border-radius: 40px; box-shadow: var(--shadow-heavy), 0 0 0 1px rgba(255, 138, 107, 0.3);
+            display: flex; flex-direction: column; overflow: hidden; position: relative;
+            transition: width 0.3s ease, height 0.3s ease;
+        }
+        #chat-viewport { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 16px; background: #ededed; }
+        .msg-row { display: flex; gap: 10px; align-items: flex-start; animation: fadeIn 0.3s ease; }
+        .msg-row.right { flex-direction: row-reverse; }
+        .avatar { width: 36px; height: 36px; border-radius: 6px; flex-shrink: 0; background-size: cover; }
+        .avatar-user { background-image: url('https://api.dicebear.com/7.x/avataaars/svg?seed=User'); background-color: #cbd5e1; }
+        .avatar-system { background-image: url('https://api.dicebear.com/7.x/bottts/svg?seed=Trime'); background-color: #10b981; }
+        .bubble { max-width: 75%; padding: 10px 14px; border-radius: 8px; font-size: 14px; line-height: 1.5; color: #000; word-break: break-all; box-shadow: 0 1px 2px rgba(0,0,0,0.1); background: #fff;}
+        .bubble-right { background: #95ec69; }
+        .bubble-code { background: #ffffff; color: #334155; font-family: monospace; font-size: 12px; border: 1px solid #e2e8f0; }
+        .toolbar { height: 44px; background: #ecf1f8; border-top: 1px solid #94a3b8; display: flex; align-items: center; padding: 0 16px; gap: 20px; font-size: 22px; flex-shrink: 0; color:#444;}
+        #global-keyboard-container { width: 100%; background: #ecf1f8; flex-shrink: 0; display: flex; flex-direction: column; }
+        
+        #global-keyboard-container { width: 100%; background: #ecf1f8; flex-shrink: 0; position: relative; }
+        .phone-dom-key { 
+            cursor: pointer; z-index: 2; transition: transform 0.05s, background-color 0.1s; 
+            border-radius: 8px; box-sizing: border-box; 
+        }
+        .phone-dom-key:active { 
+            background-color: rgba(255, 255, 255, 0.3);
+            transform: scale(0.92); 
+        }
+
+        #view-canvas { display: none; }
+        #mainCanvas {
+            box-shadow: var(--shadow-heavy), 0 0 0 1px rgba(255, 138, 107, 0.2);
+            border-radius: 24px; max-width: 95%; max-height: 90%; width: auto; height: auto; transition: 0.3s;
+        }
+        #mainCanvas:hover { box-shadow: 0 30px 70px rgba(255, 138, 107, 0.2), 0 0 0 2px rgba(255, 138, 107, 0.3); }
+        #export-canvas { display: none; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+<aside class="sidebar">
+    <div class="header">
+        <h2><i class="fas fa-layer-group"></i> 键帽工坊 </h2>
+        <div class="header-actions">
+            <a href="https://space.bilibili.com/82516644" class="header-action-btn" target="_blank" rel="noopener" title="作者B站主页">
+                <i class="fas fa-tv"></i> B站
+            </a>
+            <a href="https://hero20072.github.io/edit4weasel/" class="header-action-btn" target="_blank" rel="noopener" title="小狼毫可视编辑">
+                <i class="fas fa-keyboard"></i> 小狼毫
+            </a>
+        </div>
+    </div>
+    <div class="controls" id="control-panel">
+        
+        <details>
+            <summary><i class="fas fa-file-import icon-main"></i> 1. 原始数据</summary>
+            <div class="detail-content">
+                <button class="btn btn-primary" onclick="document.getElementById('yaml-upload').click()" style="width:100%">
+                    <i class="fas fa-folder-open"></i> 导入 Trime .yaml 文件
+                </button>
+                <input type="file" id="yaml-upload" accept=".yaml,.txt" style="display: none" onchange="handleFileUpload(event)">
+                
+                <div class="ctrl-row">
+                    <label>配色方案</label>
+                    <select id="scheme-select" style="width: 60%;" onchange="switchColorScheme(this.value)">
+                        <option value="default">默认配色</option>
+                    </select>
+                </div>
+
+                <div class="ctrl-row">
+                    <label>键盘切换</label>
+                    <select id="layout-select" style="width: 60%;" onchange="switchLayout(this.value)">
+                        <option value="default">默认布局 (内置)</option>
+                    </select>
+                </div>
+                
+                <div class="ctrl-row">
+                    <label>手机比例</label>
+                    <select id="phone-ratio-select" style = "width:60%;" onchange="changePhoneRatio()">
+                    <option value="20/9" selected>20:9</option>
+                    <option value="19.5/9">19.5:9</option>
+                    <option value="18/9">18:9</option>
+                    <option value="16/10">16:10</option>
+                    <option value="16/9">16:9</option>
+                    <option value="custom">手动输入</option>
+                    </select>
+                </div>
+                <div class="ctrl-row" id="custom-ratio-row" style="display: none; justify-content: flex-end;">
+                    <label style="flex: none;">宽x高：</label>
+                    <input type="number" id="custom-phone-w" value="375" style="width:70px; padding:4px 8px; border-radius:10px; text-align:center;" oninput="applyCustomPhoneSize()">
+                    <span style="color:var(--text-dim); margin: 0 5px;">x</span>
+                    <input type="number" id="custom-phone-h" value="833" style="width:70px; padding:4px 8px; border-radius:10px; text-align:center;" oninput="applyCustomPhoneSize()">
+                </div>
+                <hr>
+                <div id="raw-data-content" style="display:flex; flex-direction:column; gap:6px;">
+                    <div style="color: var(--text-dim); font-size: 0.8rem; text-align: center;">请导入 YAML 提取真实尺寸参数</div>
+                </div>
+            </div>
+        </details>
+
+        <details>
+            <summary><i class="fas fa-palette icon-main"></i> 2. 添加图案</summary>
+            <div class="detail-content">
+                <div style="color: var(--accent-secondary); margin-bottom: 6px;">按键图案</div>
+                <div class="ctrl-row">
+                    <label>按键图案</label>
+                    <div style="display:flex; gap:6px; flex:2;">
+                        <input type="file" id="imgFile" accept="image/*" style="flex:1;">
+                        <button class="btn" onclick="clearImage('key')" title="清空按键图案" style="padding: 4px 10px;">
+                        <i class="fas fa-trash"></i></button>
+                    </div>
+                </div>
+                <div id="panel_key_img_adjust" style="display:none; flex-direction:column; gap:8px; background:rgba(0,0,0,0.2); padding:10px; border-radius:10px; margin-bottom:10px;">
+                    <div class="ctrl-row"><label>图片缩放</label><input type="range" id="c_key_img_s" min="10" max="300" value="100"><span class="val-disp"></span></div>
+                    <div class="ctrl-row"><label>左右平移</label><input type="range" id="c_key_img_x" min="-500" max="500" value="0"><span class="val-disp"></span></div>
+                    <div class="ctrl-row"><label>上下平移</label><input type="range" id="c_key_img_y" min="-500" max="500" value="0"><span class="val-disp"></span></div>
+                </div>
+                <div class="ctrl-row">
+                    <label>模糊</label>
+                    <input type="range" id="c_key_bg_blur" min="0" max="50" value="0">
+                    <span class="val-disp"></span>
+                </div>
+
+                <hr style="margin: 10px 0;">
+
+                <div style="color: var(--text-dim); margin-bottom: 6px; display:flex; align-items:center; gap:8px;">
+                    键盘背景 <i class="fas fa-lock lock-icon" title="该功能后期开放"></i>
+                </div>
+                <div class="locked-feature" title="该功能后期开放">
+                    <div class="ctrl-row">
+                        <label style="display:flex; align-items:center; gap:5px;"><input type="checkbox" disabled> 使用上传 </label>
+                        <div style="display:flex; gap:6px; flex:2;">
+                            <input type="file" disabled style="flex:1;">
+                        </div>
+                    </div>
+                    <div class="ctrl-row" style="background:rgba(0,0,0,0.2);">
+                        <label>背景生成</label>
+                        <select disabled style="width:60%;">
+                            <option>磨砂噪点</option>
+                        </select>
+                    </div>
+                    <div class="ctrl-row" style="background:rgba(0,0,0,0.2);">
+                        <label>基础色</label>
+                        <input type="color" value="#4e4e4e" disabled>
+                    </div>
+                </div>
+            </div>
+        </details>
+
+
+        <details>
+            <summary><i class="fas fa-palette icon-main"></i> 3. 键帽材质</summary>
+            <div class="detail-content">
+                <div class="ctrl-row">
+                    <label>基础色</label>
+                    <input type="color" id="c_base_color" value="#F3F4F4" onchange="updateConfig()">
+                </div>
+                <hr>
+
+                <div class="ctrl-row">
+                    <label>键帽大类</label>
+                    <select id="c_type" style="font-weight:bold; color:var(--accent-primary);width: 60%;">
+                        <option value="flat" selected>现代平面</option>
+                        <option disabled>机械3D 🔒 (后期开放)</option>
+                    </select>
+                </div>
+                <div class="ctrl-row" id="row_style_flat">
+                    <label>风格</label>
+                    <select id="c_style_flat" style="width:60%;" onchange="updateConfig()">
+                        <option value="glass" selected>毛玻璃</option>
+                        <option disabled>拟态 🔒 (后期开放)</option>
+                        <option disabled>内嵌 🔒</option>
+                        <option disabled>浮雕 🔒</option>
+                        <option disabled>拟真 🔒</option>
+                        <option disabled>像素 🔒</option>
+                        <option disabled>动漫 🔒</option>
+                        <option disabled>宣纸 🔒</option>
+                    </select>
+                </div>
+                <hr>
+            </div>
+        </details>
+
+        
+        <details>
+            <summary><i class="fas fa-vector-square icon-main"></i> 4. 几何调整</summary>
+            <div class="detail-content">
+                <div class="ctrl-row">
+                    <label>上部圆角</label>
+                    <input type="range" id="c_rt" min="0" max="50" value="20">
+                    <span class="val-disp"></span>
+                </div>
+                <div class="ctrl-row">
+                    <label>下部圆角</label>
+                    <input type="range" id="c_rb" min="0" max="50" value="20">
+                    <span class="val-disp"></span>
+                </div>
+                <hr>
+                <div class="ctrl-row">
+                    <label>描边宽度</label>
+                    <input type="range" id="c_border_w" min="0" max="10" step="0.5" value="0">
+                    <span class="val-disp"></span>
+                </div>
+                <div class="ctrl-row">
+                    <label>描边颜色</label>
+                    <input type="color" id="c_border_c" value="#ffffff">
+                </div>
+                <div class="ctrl-row">
+                    <label>描边透明</label>
+                    <input type="range" id="c_border_op" min="0" max="100" value="30">
+                    <span class="val-disp"></span>
+                </div>
+            </div>
+        </details>
+
+        <details>
+            <summary><i class="fas fa-lightbulb icon-main"></i> 5. 颜色光影</summary>
+            <div class="detail-content">
+                <div id="panel_flat_light" style="display:flex; flex-direction:column; gap:14px;">
+                    <div class="ctrl-row"><label>外高光</label>
+                        <input type="range" id="c_flat_hl" min="0" max="100" value="20"><span class="val-disp"></span></div>
+                    <div class="ctrl-row"><label>外阴影</label>
+                        <input type="range" id="c_flat_sd" min="0" max="100" value="30"><span class="val-disp"></span></div>
+                    
+                    <div class="ctrl-row row_glass_only">
+                        <label>玻璃模糊</label>
+                        <input type="range" id="c_glass_blur" min="0" max="40" value="10"><span class="val-disp"></span>
+                    </div>
+                    <div class="ctrl-row row_glass_only">
+                        <label>不透明度</label>
+                        <input type="range" id="c_glass_op" min="0" max="100" value="30"><span class="val-disp"></span>
+                    </div>
+                </div>
+            </div>
+        </details>
+
+        <details>
+            <summary><i class="fas fa-font icon-main"></i> 6. 按键文字</summary>
+            <div class="detail-content">
+                <div class="ctrl-row" style="flex-wrap:wrap;">
+                    <label style="width:100%; margin-bottom:5px;">上传字体</label>
+                    <input type="file" id="font-upload" accept=".ttf,.otf,.woff,.woff2" style="width:60%;">
+                </div>
+
+                <div class="ctrl-row">
+                    <label>字体选择</label>
+                    <select id="c_font" style="width: 60%;">
+                        <option value="Geom" selected>Geom (Google Fonts)</option>
+                        <option value="system-ui">系统默认</option>
+                        <option value="Arial Black">Arial Black</option>
+                        <option value="Courier New">打字机 (Courier)</option>
+                    </select>
+                </div>
+
+                <div class="ctrl-row">
+                    <label>字重 (粗细)</label>
+                    <select id="c_font_weight" style="width: 60%;">
+                        <option value="normal">默认</option>
+                        <option value="bold" selected>加粗</option>
+                    </select>
+                </div>
+                <div class="ctrl-row">
+                    <label>工艺预设</label>
+                    <select id="c_tstyle" style="width: 60%;" onchange="updateConfig()">
+                        <option value="flat" selected>平印</option>
+                        <option value="emboss">凸起</option>
+                        <option value="engrave">凹刻</option>
+                    </select>
+                </div>
+                
+                <div class="ctrl-row"><label>文字主色</label><input type="color" id="c_tc" value="#F3F4F4"></div>
+                <hr>
+                <div class="ctrl-row"><label>字号</label>
+                    <input type="range" id="c_fz" min="0" max="120" value="60">
+                    <span class="val-disp"></span></div>
+                <div class="ctrl-row"><label>X偏移</label><input type="range" id="c_ftx" min="-40" max="40" value="0"><span class="val-disp"></span></div>
+                <div class="ctrl-row"><label>Y偏移</label><input type="range" id="c_fty" min="-40" max="40" value="0"><span class="val-disp"></span></div>
+            </div>
+        </details>
+
+        <details>
+            <summary>
+                <i class="fas fa-stamp icon-main"></i> 7. 印花装饰 
+                <i class="fas fa-lock lock-icon" style="margin-left:auto; color:var(--text-dim);" title="该功能后期开放"></i>
+            </summary>
+            <div class="detail-content locked-feature" title="该功能后期开放">
+                <div class="ctrl-row">
+                    <label>添加印花图片</label>
+                    <input type="file" disabled style="flex:2;">
+                </div>
+                <div class="ctrl-row">
+                    <label>当前印花</label>
+                    <div style="display:flex; gap:6px; flex:2;">
+                        <select disabled style="flex:1;"><option>无</option></select>
+                        <button class="btn" disabled style="padding: 4px 10px;"><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:8px; background:rgba(0,0,0,0.2); padding:10px; border-radius:10px; margin-bottom:10px;">
+                    <button class="btn" disabled style="width:100%; justify-content:center; margin-bottom: 5px; background: #28313E;">
+                        <i class="fas fa-hand-pointer"></i> <span>点击开启画布拖拽</span>
+                    </button>
+                    <div class="ctrl-row"><label>透明度</label><input type="range" disabled value="100"><span class="val-disp">100</span></div>
+                    <div class="ctrl-row"><label>缩放大小</label><input type="range" disabled value="50"><span class="val-disp">100</span></div>
+                </div>
+            </div>
+        </details>
+    </div>
+    
+    <div class="bottom-actions" style="flex-wrap: wrap;">
+        <div style="width:100%; display:flex; justify-content:space-between; align-items:center; padding:0 5px 10px 5px; color:var(--text-dim); font-size:0.85rem;">
+            <label>切片四周空白宽(px):</label>
+            <input type="number" id="export_pad" value="7" style="width:60px; padding:4px; background:#1B222B; color:#fff; border:1px solid #33404D; border-radius:5px; text-align:center;">
+        </div>
+        
+        <button class="btn" id="export-png"><i class="fas fa-camera"></i> 保存渲染图</button>
+        <button class="btn btn-primary" id="export-zip"><i class="fas fa-file-zipper"></i> 打包导出</button>
+    </div>
+</aside>
+
+<main class="main-content">
+    <div class="view-tabs">
+        <button class="tab-btn active" id="tab-phone" onclick="switchViewMode('phone')">
+             手机布局
+        </button>
+        <button class="tab-btn" id="tab-canvas" onclick="switchViewMode('canvas')">
+            <i class="fas fa-brush"></i> 高清渲染
+        </button>
+    </div>
+
+    <!--手机模拟 -->
+    <div class="view-container" id="view-phone">
+        <div class="phone-mockup">
+            <div id="chat-viewport"></div>
+            <div class="toolbar">
+                <span>⋮</span>
+                <span style="flex:1"></span>
+                <span>😊</span>
+                <span>📋</span>
+                <span>🎤</span>
+                <span>⚙️</span>
+                <span>▾</span>
+            </div>
+            <div id="global-keyboard-container">
+                <div id="global-keyboard-viewport"></div>
+            </div>
+        </div>
+    </div>
+
+    <!--Canvas-->
+    <div class="view-container" id="view-canvas">
+        <canvas id="mainCanvas"></canvas>
+    </div>
+    <canvas id="export-canvas"></canvas>
+
+</main>
+
+<script>
+    function changePhoneRatio() {
+        const select = document.getElementById('phone-ratio-select');
+        const customRow = document.getElementById('custom-ratio-row');
+        const phoneMockup = document.querySelector('.phone-mockup');
+        
+        if (select.value === 'custom') {
+            customRow.style.display = 'flex';
+            applyCustomPhoneSize();
+        } else {
+            customRow.style.display = 'none';
+            const [hRatio, wRatio] = select.value.split('/');
+            const baseWidth = 375;
+            const newHeight = Math.round(baseWidth * (hRatio / wRatio));
+            
+            phoneMockup.style.width = `${baseWidth}px`;
+            phoneMockup.style.height = `${newHeight}px`;
+            setTimeout(updateLayout, 350);
+        }
+    }
+
+    function applyCustomPhoneSize() {
+        const w = document.getElementById('custom-phone-w').value;
+        const h = document.getElementById('custom-phone-h').value;
+        const phoneMockup = document.querySelector('.phone-mockup');
+        if (w && h) {
+            phoneMockup.style.width = `${w}px`;
+            phoneMockup.style.height = `${h}px`;
+            setTimeout(updateLayout, 350);
+        }
+    }
+
+    const defaultPresetKeys = {
+        "Keyboard_number": { label: "123", functional: true },
+        "VOICE_ASSIST": { label: "Vol", functional: true, send: "VOICE_ASSIST" },
+        "Shift_L": { label: "⇧", preview: "⇪", functional: false, send: "Shift_L" },
+        "Shift_L3": { label: "Shift", preview: "⇪", functional: false, send: "Shift_L", shift_lock: "click" },
+        "Return": { label: "enter_labels", preview: "↩", functional: false, send: "Return" },
+        "enter_labels": { go: "前往", done: "完成", next: "下个", pre: "上个", search: "搜索", send: "发送", default: "enter" },
+        "Return1": { label: "enter", preview: "↩", functional: false, send: "Return" },
+        "Return2": { label: "enter", send: "Return" },
+        "Hide": { label: "隐藏", send: "BACK" },
+        "BackSpace": { label: "⌫", preview: "⇦", repeatable: true, functional: false, send: "BackSpace" },
+        "BackSpace2": { label: "⌫", preview: "⇦", repeatable: true, functional: false, slide_delete: true, send: "BackSpace" },
+        "space": { repeatable: false, preview: " ", functional: false, slide_cursor: true, label: "space", send: "space" },
+        "space1": { repeatable: false, label: "space", functional: false, send: "space" },
+        "Clear": { label: "全清", send: "Clear" },
+        "Escape": { label: "取消", functional: false, send: "Escape" },
+        "Home": { label: "行首", send: "Home", functional: false },
+        "Insert": { label: "插入", send: "Insert" },
+        "Delete": { label: "删除", send: "Delete", functional: false },
+        "End": { label: "行尾", send: "End", functional: false },
+        "Page_Up": { label: "上页", send: "Page_Up", functional: false },
+        "Page_Down": { label: "下页", send: "Page_Down", functional: false },
+        "Left": { label: "←", send: "Left", repeatable: true, functional: false },
+        "Down": { label: "↓", send: "Down", functional: false },
+        "Up": { label: "↑", send: "Up", functional: false },
+        "Right": { label: "→", send: "Right", repeatable: true, functional: false },
+        "select_all": { label: "全选", functional: false, send: "Control+a" },
+        "cut": { label: "剪切", functional: false, send: "Control+x" },
+        "copy": { label: "复制", functional: false, send: "Control+c" },
+        "paste": { label: "粘贴", functional: false, send: "Control+v" },
+        "paste_clip": { label: "粘贴", send: "function", command: "clipboard" },
+        "paste_text": { label: "貼上文本", send: "Control+Shift+Alt+v" },
+        "share_text": { label: "分享文本", send: "Control+Alt+s" },
+        "redo": { label: "重做", functional: false, send: "Control+Shift+z" },
+        "undo": { label: "撤销", functional: false, send: "Control+z" },
+        "delimiter": { label: "分词", text: "'" },
+        "F4": { label: "方案菜单", send: "F4" },
+        "BackToPreviousSyllable": { label: "删音节", send: "Control+BackSpace" },
+        "CommitRawInput": { label: "编码", send: "Control+Return" },
+        "CommitScriptText": { label: "编码", send: "Shift+Return" },
+        "CommitComment": { label: "编码", send: "Control+Shift+Return" },
+        "DeleteCandidate": { label: "删词", send: "Control+Delete", functional: false },
+        "Keyboard_letter": { label: "字母", functional: true, send: "Eisu_toggle", select: "default" },
+        "Keyboard_default": { label: "返回", functional: false, send: "Eisu_toggle", select: ".default" },
+        "Keyboard_switch": { label: "键盘", functional: true, send: "Eisu_toggle", select: ".next" },
+        "Keyboard_editor": { label: "编辑", functional: false, send: "Eisu_toggle", select: "editor" },
+        "Keyboard_symbols": { label: "更多", functional: false, send: "Eisu_toggle", select: "symbols" },
+        "Keyboard_move": { label: "❖", functional: true, send: "Eisu_toggle", select: "move" },
+        "Keyboard_next": { label: "后退", functional: false, send: "Eisu_toggle", select: ".next" },
+        "Keyboard_last": { label: "后退", functional: false, send: "Eisu_toggle", select: ".last" },
+        "Keyboard_last_lock": { label: "返回", send: "Eisu_toggle", select: ".last_lock" },
+        "liquid_keyboard_exit": { label: "返回", send: "function", command: "liquid_keyboard", option: "-1" },
+        "liquid_keyboard_switch": { label: "更多", send: "function", command: "liquid_keyboard", option: "特殊" },
+        "liquid_keyboard_tabs": { label: "更多", send: "function", command: "liquid_keyboard", option: "更多" },
+        "liquid_keyboard_emoji": { label: "🙂", send: "function", command: "liquid_keyboard", option: "emoji" },
+        "liquid_keyboard_ascii": { label: "英符", send: "function", command: "liquid_keyboard", option: "英符" },
+        "menu_keyboard": { label: "菜单", send: "function", command: "menu_keyboard" },
+        "clipboard_window": { label: "剪贴", send: "function", command: "clipboard_window" },
+        "Mode_switch": { toggle: "ascii_mode", functional: false, send: "Mode_switch", states: [ "cn", "en" ] },
+        "Zenkaku_Hankaku": { toggle: "full_shape", send: "Mode_switch", states: [ "半角", "全角" ] },
+        "Henkan": { toggle: "simplification", send: "Mode_switch", states: [ "漢字", "汉字" ] },
+        "Charset_switch": { toggle: "extended_charset", send: "Mode_switch", states: [ "常用", "增广" ] },
+        "Punct_switch": { toggle: "ascii_punct", send: "Mode_switch", states: [ "。，", "．，" ] },
+        "IME_switch": { label: "🌐", send: "LANGUAGE_SWITCH" },
+        "Schema_switch": { label: "下一方案", functional: false, send: "Control+Shift+1" },
+        "Schema_Eng": { label: "En", functional: true, send: "Control+Shift+0" },
+        "Theme_settings": { label: "主题", send: "SETTINGS", option: "theme" },
+        "Color_switch": { label: "配色", functional: false, send: "PROG_RED" },
+        "Menu": { label: "菜单", functional: false, send: "Menu" },
+        "Settings": { label: "设置", functional: false, send: "SETTINGS" },
+        "Date": { label: "日期", send: "function", command: "date", option: "yyyy-MM-dd" },
+        "Time": { label: "時間", send: "function", command: "date", option: "HH:mm:ss" },
+        "Left1": { label: "⇦", send: "Control+Left", repeatable: true, functional: false },
+        "Right1": { label: "⇨", send: "Control+Right", repeatable: true, functional: false },
+        "Shift_L2": { label: "选择", preview: "⇪", functional: false, send: "Shift_L" }
+    };
+
+    let state = {
+        style: { 
+            keyboard_height: 250, 
+            keyboard_padding_bottom: 3, 
+            vertical_gap: 6, 
+            horizontal_gap: 6, 
+            key_height: 44, 
+            round_corner: 8, 
+            key_text_size: 20, 
+            auto_height_index: -1 
+        },
+        preset_keys: defaultPresetKeys,
+        preset_keyboards: {
+            "default": {
+                name: "默认 26 键", width: 10,
+                keys: [
+                    { click: "q" }, { click: "w" }, { click: "e" }, { click: "r" }, { click: "t" }, { click: "y" }, { click: "u" }, { click: "i" }, { click: "o" }, { click: "p" }, 
+                    { width: 5 }, { click: "a" }, { click: "s" }, { click: "d" }, { click: "f" }, { click: "g" }, { click: "h" }, { click: "j" }, { click: "k" }, { click: "l" }, { width: 5 },
+                    { click: "Shift_L", width: 15 }, { click: "z" }, { click: "x" }, { click: "c" }, { click: "v" }, { click: "b" }, { click: "n" }, { click: "m" }, { click: "BackSpace", width: 15 }, 
+                    { click: "Keyboard_number", width: 25 }, { click: "space", width: 50 }, { click: "Return", width: 25 }
+                ]
+            }
+        }
+    };
+
+    let currentLayout = "default";
+    let currentSkinName = "custom_skin";
+    let currentColorScheme = "default";
+    let viewMode = 'phone'; 
+    let isHDSynced = false;
+    const PADDING = 20;            
+    const HD_SCALE = 1400 / 375;   
+
+    const canvas = document.getElementById('mainCanvas');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    let sourceImg = null;
+    let bgCanvas = document.createElement('canvas'); let bgCtx = bgCanvas.getContext('2d');
+    let keyBgCanvas = document.createElement('canvas'); let keyBgCtx = keyBgCanvas.getContext('2d');
+    let cfg = {}; 
+    let renderLayout = { w: 1200, h: 800, keys: [] }; 
+
+    function clearImage(type) {
+        if (type === 'key') {
+            document.querySelectorAll('#imgFile').forEach(el => el.value = '');
+            sourceImg = null;
+            document.getElementById('panel_key_img_adjust').style.display = 'none';
+            document.getElementById('c_key_img_s').value = 100;
+            document.getElementById('c_key_img_x').value = 0;
+            document.getElementById('c_key_img_y').value = 0;
+        }
+        updateConfig();
+    }
+
+    function switchViewMode(mode) {
+        viewMode = mode;
+        document.getElementById('view-phone').style.display = mode === 'phone' ? 'flex' : 'none';
+        document.getElementById('view-canvas').style.display = mode === 'canvas' ? 'flex' : 'none';
+        document.getElementById('tab-phone').classList.toggle('active', mode === 'phone');
+        document.getElementById('tab-canvas').classList.toggle('active', mode === 'canvas');
+        if(mode === 'canvas') updateConfig();
+    }
+
+    document.getElementById('font-upload').addEventListener('change', async function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        try {
+            const arrayBuffer = await file.arrayBuffer();
+            const fontName = 'CustomFont_' + Date.now(); 
+            const fontFace = new FontFace(fontName, arrayBuffer);
+            await fontFace.load();
+            document.fonts.add(fontFace);
+            
+            const select = document.getElementById('c_font');
+            const option = document.createElement('option');
+            option.value = fontName;
+            option.text = `📂 ${file.name} (已加载)`;
+            option.selected = true;
+            select.add(option, 0); 
+            select.value = fontName;
+
+            addChatMessage('system', `✅ 字体 <b>${file.name}</b> 加载成功！`);
+            updateConfig();
+        } catch (err) { alert('字体加载失败，请确保是有效的 TTF/OTF/WOFF 文件。'); }
+        e.target.value = ''; 
+    });
+
+    document.getElementById('control-panel').addEventListener('input', (e) => {
+        const id = e.target.id;
+        if (id === 'phone-ratio-select' || id === 'custom-phone-w' || id === 'custom-phone-h' || id === 'layout-select') return; 
+        if (!isHDSynced) isHDSynced = true;
+        updateConfig();
+    });
+
+    const rawDataFields = [
+        { key: 'keyboard_height', name: '键盘高度' }, 
+        { key: 'keyboard_padding_bottom', name: '底部边距' },
+        { key: 'key_height', name: '按键高度' }, 
+        { key: 'vertical_gap', name: '垂直间距' },
+        { key: 'horizontal_gap', name: '水平间距' }, 
+        { key: 'round_corner', name: '圆角半径' },
+        { key: 'key_text_size', name: '文字大小' }
+    ];
+
+    function addChatMessage(side, text, isCode = false) {
+        const vp = document.getElementById('chat-viewport');
+        const row = document.createElement('div'); row.className = `msg-row ${side === 'right' ? 'right' : ''}`;
+        const avatar = side === 'right' ? 'avatar-user' : 'avatar-system';
+        const bubble = isCode ? 'bubble-code' : (side === 'right' ? 'bubble-right' : '');
+        row.innerHTML = `<div class="avatar ${avatar}"></div><div class="bubble ${bubble}">${text}</div>`;
+        vp.appendChild(row); vp.scrollTo({ top: vp.scrollHeight, behavior: 'smooth' });
+    }
+
+    function handleFileUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                let rawText = e.target.result;
+                rawText = rawText.replace(/&([a-zA-Z0-9_]+)\s+([^\s#\n\r]+)/g, '"_DEF_$1_ $2"');
+                rawText = rawText.replace(/\*([a-zA-Z0-9_]+)/g, '"_REF_$1_"');
+                const doc = jsyaml.load(rawText);
+                processYamlData(doc);
+                addChatMessage('system', `✅ 成功导入文件：<b>${file.name}</b><br>点击上方切换查看高清渲染效果！`);
+                switchViewMode('phone');
+            } catch (err) { alert("解析失败: " + err.message); }
+        };
+        reader.readAsText(file); event.target.value = '';
+    }
+
+    function processYamlData(doc) {
+        if (doc.name) currentSkinName = String(doc.name || "custom_skin").replace(/[^a-zA-Z0-9_\u4e00-\u9fa5\-]/g, '');
+        if (doc.preset_color_schemes) {
+            state.preset_color_schemes = doc.preset_color_schemes;
+            const selScheme = document.getElementById('scheme-select'); selScheme.innerHTML = '';
+            Object.keys(state.preset_color_schemes).forEach(k => {
+                selScheme.innerHTML += `<option value="${k}">${state.preset_color_schemes[k].name || k} (${k})</option>`;
+            });
+            currentColorScheme = doc.color_scheme && state.preset_color_schemes[doc.color_scheme] ? doc.color_scheme : Object.keys(state.preset_color_schemes)[0];
+            selScheme.value = currentColorScheme;
+        } else {
+            state.preset_color_schemes = { "default": { name: "默认配色" } };
+            currentColorScheme = "default";
+        }
+
+        updateRawDataDisplay(doc);
+
+        if (doc.preset_keys) state.preset_keys = { ...defaultPresetKeys, ...doc.preset_keys };
+        if (doc.preset_keyboards) {
+            state.preset_keyboards = doc.preset_keyboards;
+            const sel = document.getElementById('layout-select'); sel.innerHTML = '';
+            Object.keys(state.preset_keyboards).forEach(k => {
+                sel.innerHTML += `<option value="${k}">${state.preset_keyboards[k].name || k}</option>`;
+            });
+            currentLayout = Object.keys(state.preset_keyboards)[0];
+        }
+        isHDSynced = false;
+        addChatMessage('system', '已重置为初始布局预览。调整下方参数可开启高清渲染。');
+        updateLayout();
+    }
+
+    function switchColorScheme(val) { currentColorScheme = val; isHDSynced = false; updateLayout(); }
+
+    function updateRawDataDisplay(doc = {}) {
+        const styleData = doc.style || state.style || {};
+        const schemeData = state.preset_color_schemes[currentColorScheme] || {};
+        const contentDiv = document.getElementById('raw-data-content'); 
+        contentDiv.innerHTML = '';
+        rawDataFields.forEach(f => {
+            let val = styleData[f.key] !== undefined ? styleData[f.key] : schemeData[f.key];
+            if (val !== undefined) {
+                if (typeof val === 'number' && val > 99999) val = '0x' + val.toString(16).toUpperCase();
+                contentDiv.innerHTML += `<div class="data-row"><span class="data-label">${f.name}</span><span class="data-val">${val}</span></div>`;
+                if (typeof val === 'number') state.style[f.key] = val;
+            }
+        });
+    }
+
+    function resolveKeyData(keyConfig) {
+        let final = { ...keyConfig };
+        if (final.click && state.preset_keys[final.click]) {
+            const preset = state.preset_keys[final.click];
+            if (typeof preset === 'object') final = { ...final, ...preset };
+            else if (typeof preset === 'string') final.label = preset;
+        }
+        if (final.label && typeof final.label === 'string' && typeof state.preset_keys[final.label] === 'object') {
+            final.label = state.preset_keys[final.label].default || final.label;
+        }
+        return final;
+    }
+
+    function switchLayout(val) { currentLayout = val; updateLayout(); if(viewMode==='canvas') switchViewMode('canvas'); }
+
+    function updateLayout() {
+        const s = state.style; 
+        const kbData = state.preset_keyboards[currentLayout];
+        if (!kbData) return;
+
+        const phoneMockup = document.querySelector('.phone-mockup');
+        const phoneW = phoneMockup.offsetWidth || 375; 
+        
+        const TOOLBAR_H = 44; 
+        const KB_H = s.keyboard_height; 
+        const PAD_B = s.keyboard_padding_bottom; 
+        
+        const availableH = Math.max(0, KB_H - PAD_B);
+
+        const container = document.getElementById('global-keyboard-container');
+        container.style.height = `${KB_H}px`;
+        container.innerHTML = `
+            <canvas id="phone-preview-canvas" width="${phoneW}" height="${KB_H}" style="position: absolute; top:0; left:0; width:100%; height:${KB_H}px; z-index: 0; pointer-events:none;"></canvas>
+            <div id="dom-keys-layer" style="position: absolute; top:0; left:0; width:100%; height:${availableH}px; z-index:1;"></div>
+        `;
+        const domLayer = document.getElementById('dom-keys-layer');
+        const pCanvas = document.getElementById('phone-preview-canvas');
+        const pCtx = pCanvas.getContext('2d');
+
+        let rows = [], cur = { keys: [], width: 0, weight: 0 };
+        kbData.keys.forEach((rawKey, idx) => {
+            const key = resolveKeyData(rawKey); const w = parseFloat(key.width || kbData.width || 10);
+            if (cur.width > 0 && cur.width + w > 100.1) { rows.push(cur); cur = { keys: [], width: 0, weight: 0 }; }
+            if (cur.keys.length === 0) cur.weight = parseFloat(key.height || s.key_height);
+            cur.keys.push({ ...key, cWidth: w, originalIndex: idx }); cur.width += w; 
+        });
+        if (cur.keys.length > 0) rows.push(cur);
+
+        const gapY = s.vertical_gap;
+        const scaleX = phoneW / 375; 
+        const gapX = s.horizontal_gap * scaleX;
+
+        let rawSumHeight = 0;
+        rows.forEach(r => { rawSumHeight += r.weight; });
+        
+        let scaleY = 1;
+        let scaledVerticalGap = gapY;
+        let rowHeights = rows.map(r => r.weight);
+        
+        if (availableH > 0 && rawSumHeight > 0) {
+            scaleY = availableH / (rawSumHeight + gapY * (rows.length + 1));
+            scaledVerticalGap = Math.ceil(gapY * scaleY);
+            let usedHeight = scaledVerticalGap * (rows.length + 1);
+            rowHeights = rowHeights.map(h => { let scaledH = Math.floor(h * scaleY); usedHeight += scaledH; return scaledH; });
+            rowHeights[rows.length - 1] += (availableH - usedHeight);
+        }
+
+        const TOTAL_RENDER_H = TOOLBAR_H + KB_H;
+        const HD_W = phoneW * HD_SCALE;
+        const HD_H = TOTAL_RENDER_H * HD_SCALE;
+        
+        canvas.width = HD_W + PADDING*2; 
+        canvas.height = HD_H + PADDING*2;
+        bgCanvas.width = canvas.width; bgCanvas.height = canvas.height;
+        keyBgCanvas.width = canvas.width; keyBgCanvas.height = canvas.height;
+        
+        renderLayout = { 
+            w: canvas.width, h: canvas.height, keys: [],
+            zones: { 
+                toolbar: { y: 0, h: TOOLBAR_H * HD_SCALE }, 
+                main:    { y: TOOLBAR_H * HD_SCALE, h: availableH * HD_SCALE },
+                padding: { y: (TOOLBAR_H + availableH) * HD_SCALE, h: PAD_B * HD_SCALE },
+                fullW: HD_W 
+            }
+        };
+
+        let currentY = scaledVerticalGap;
+        rows.forEach((row, rowIndex) => {
+            const rowH = rowHeights[rowIndex];
+            let currentX = 0;
+            row.keys.forEach(k => {
+                const keyW = (k.cWidth / 100) * phoneW;
+                const px = currentX + gapX/2, py = currentY, pw = keyW - gapX, ph = rowH;
+
+                if (k.click || k.label) {
+                    const el = document.createElement('div'); el.className = 'phone-dom-key';
+                    el.style.left = `${px}px`; el.style.top = `${py}px`; el.style.width = `${pw}px`; el.style.height = `${ph}px`;
+                    el.style.borderRadius = `${s.round_corner}px`;
+                    el.onclick = () => addChatMessage('right', `测试点击: [ ${k.label || k.click || ''} ]`);
+                    domLayer.appendChild(el);
+
+                    if (!isHDSynced) {
+                        pCtx.fillStyle = (k.functional || k.width > 15) ? '#cbd5e1' : '#ffffff';
+                        pCtx.beginPath(); pCtx.roundRect(px, py, pw, ph, s.round_corner); pCtx.fill();
+                        pCtx.fillStyle = '#334155'; pCtx.font = `bold ${s.key_text_size}px sans-serif`;
+                        pCtx.textAlign = 'center'; pCtx.textBaseline = 'middle';
+                        pCtx.fillText(k.label || k.click || '', px + pw/2, py + ph/2);
+                    }
+
+                    renderLayout.keys.push({
+                        id: k.click || k.label || 'key',
+                        char: k.label || k.text || k.click || '',
+                        x: PADDING + px * HD_SCALE, 
+                        y: PADDING + (TOOLBAR_H + py) * HD_SCALE, 
+                        w: pw * HD_SCALE, 
+                        h: ph * HD_SCALE
+                    });
+                }
+                currentX += keyW;
+            });
+            currentY += rowH + scaledVerticalGap;
+        });
+
+        if (isHDSynced) updateConfig(); 
+    }
+
+    function syncToPhonePreview() {
+        if (!isHDSynced) return;
+        const phoneCanvas = document.getElementById('phone-preview-canvas');
+        if(phoneCanvas) {
+            const pCtx = phoneCanvas.getContext('2d');
+            pCtx.clearRect(0, 0, phoneCanvas.width, phoneCanvas.height);
+            const TOOLBAR_H_HD = 44 * HD_SCALE; 
+            pCtx.drawImage(canvas, PADDING, PADDING + TOOLBAR_H_HD, canvas.width - PADDING * 2, canvas.height - PADDING * 2 - TOOLBAR_H_HD, 0, 0, phoneCanvas.width, phoneCanvas.height);
+        }
+    }
+    
+    function hexToRgb(hex) { 
+        let r = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex); 
+        return r ? {r:parseInt(r[1],16),g:parseInt(r[2],16),b:parseInt(r[3],16)} : {r:50,g:50,b:50}; 
+    }
+    function pathRoundRect(ctx, x, y, w, h, rt, rb) {
+        ctx.beginPath(); ctx.moveTo(x+rt, y); ctx.lineTo(x+w-rt, y); ctx.quadraticCurveTo(x+w, y, x+w, y+rt);
+        ctx.lineTo(x+w, y+h-rb); ctx.quadraticCurveTo(x+w, y+h, x+w-rb, y+h);
+        ctx.lineTo(x+rb, y+h); ctx.quadraticCurveTo(x, y+h, x, y+h-rb); ctx.lineTo(x, y+rt); ctx.quadraticCurveTo(x, y, x+rt, y); ctx.closePath();
+    }
+
+    function updateConfig() {
+        const getV = id => parseFloat(document.getElementById(id).value) || 0;
+        const getC = id => document.getElementById(id).value;
+        
+        document.querySelectorAll('input[type="range"]').forEach(el => { if(el.nextElementSibling) el.nextElementSibling.innerText = el.value; });
+
+        cfg = {
+            type: 'flat',
+            fStyle: 'glass', 
+            rt: getV('c_rt'), rb: getV('c_rb'), 
+            borderW: getV('c_border_w'), borderC: getC('c_border_c'), borderOp: getV('c_border_op') / 100,
+            bgColor: hexToRgb(getC('c_base_color')), 
+            keyBgBlur: getV('c_key_bg_blur'), 
+            keyImgS: getV('c_key_img_s') / 100, keyImgX: getV('c_key_img_x'), keyImgY: getV('c_key_img_y'),
+            
+            fHl: getV('c_flat_hl')/100, fSd: getV('c_flat_sd')/100, 
+            gBlur: getV('c_glass_blur'), gOp: getV('c_glass_op')/100,
+            
+            font: getC('c_font'), fontWeight: getC('c_font_weight'),
+            tstyle: getC('c_tstyle'), tc: getC('c_tc'), 
+            fz: getV('c_fz'), ftx: getV('c_ftx'), fty: getV('c_fty')
+        };
+        
+        prepareBackground(); requestAnimationFrame(render);
+    }
+
+    document.getElementById('imgFile').onchange = (e) => {
+        if(!e.target.files[0]) {
+            sourceImg = null; document.getElementById('panel_key_img_adjust').style.display = 'none'; updateConfig(); return;
+        }
+        const r = new FileReader();
+        r.onload = (ev) => { 
+            sourceImg = new Image(); 
+            sourceImg.onload = () => { document.getElementById('panel_key_img_adjust').style.display = 'flex'; updateConfig(); };
+            sourceImg.src = ev.target.result; 
+        };
+        r.readAsDataURL(e.target.files[0]);
+    };
+
+    function prepareBackground() {
+        bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+        keyBgCtx.clearRect(0, 0, keyBgCanvas.width, keyBgCanvas.height);
+        
+        // 基础黑色底
+        bgCtx.fillStyle = "#1e1e1e";
+        bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
+        keyBgCtx.fillStyle = "#1e1e1e";
+        keyBgCtx.fillRect(0, 0, keyBgCanvas.width, keyBgCanvas.height);
+
+        if (sourceImg) {
+            const scaleBase = Math.max(renderLayout.zones.fullW / sourceImg.width, renderLayout.h / sourceImg.height);
+            const finalScale = scaleBase * cfg.keyImgS;
+            const drawW = sourceImg.width * finalScale;
+            const drawH = sourceImg.height * finalScale;
+            const finalX = PADDING + (renderLayout.zones.fullW/2) - (drawW / 2) + (cfg.keyImgX * 2); 
+            const finalY = PADDING + (renderLayout.h/2) - (drawH / 2) + (cfg.keyImgY * 2);
+
+            bgCtx.save();
+            if(cfg.keyBgBlur > 0) bgCtx.filter = `blur(${cfg.keyBgBlur}px)`;
+            bgCtx.drawImage(sourceImg, finalX, finalY, drawW, drawH);
+            bgCtx.restore();
+
+            keyBgCtx.save();
+            if(cfg.keyBgBlur > 0) keyBgCtx.filter = `blur(${cfg.keyBgBlur}px)`;
+            keyBgCtx.drawImage(sourceImg, finalX, finalY, drawW, drawH);
+            keyBgCtx.restore();
+        }
+    }
+
+    function render() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(bgCanvas, 0, 0);
+
+        renderLayout.keys.forEach(k => {
+            ctx.save(); ctx.translate(k.x, k.y);
+            drawFlat(ctx, k); 
+            drawText(ctx, k); 
+            ctx.restore();
+        });
+        syncToPhonePreview();
+    }
+
+    function drawFlat(tCtx, key) {
+        tCtx.save();
+        const cR = cfg.bgColor.r, cG = cfg.bgColor.g, cB = cfg.bgColor.b;
+        
+        tCtx.shadowColor = `rgba(0,0,0,${cfg.fSd})`; tCtx.shadowBlur = 20; tCtx.shadowOffsetY = 10;
+        pathRoundRect(tCtx, 0, 0, key.w, key.h, cfg.rt, cfg.rb); tCtx.fillStyle = '#000'; tCtx.fill();
+        tCtx.shadowColor = 'transparent'; tCtx.clip();
+
+        tCtx.save(); tCtx.filter = `blur(${cfg.gBlur}px) saturate(1.2)`;
+        tCtx.drawImage(keyBgCanvas, key.x - 10, key.y - 10, key.w + 20, key.h + 20, -10, -10, key.w + 20, key.h + 20); tCtx.restore(); 
+        
+        tCtx.fillStyle = `rgba(${cR}, ${cG}, ${cB}, ${cfg.gOp})`; tCtx.fill();
+        
+        const grad = tCtx.createLinearGradient(0,0, key.w, key.h);
+        grad.addColorStop(0, `rgba(255,255,255,${cfg.fHl})`); 
+        grad.addColorStop(1, `rgba(255,255,255,0)`);
+        tCtx.strokeStyle = grad; tCtx.lineWidth = 2; tCtx.stroke();
+
+        if (cfg.borderW > 0) {
+            tCtx.beginPath();
+            pathRoundRect(tCtx, 0, 0, key.w, key.h, cfg.rt, cfg.rb);
+            const bc = hexToRgb(cfg.borderC);
+            tCtx.strokeStyle = `rgba(${bc.r},${bc.g},${bc.b},${cfg.borderOp})`;
+            tCtx.lineWidth = cfg.borderW;
+            tCtx.stroke();
+        }
+        tCtx.restore(); 
+    }
+
+    function drawText(tCtx, key) {
+        tCtx.save();
+        tCtx.font = `normal ${cfg.fontWeight} ${cfg.fz}px "${cfg.font}"`; 
+        tCtx.textAlign = "center"; tCtx.textBaseline = "middle";
+        const cx = key.w/2 + cfg.ftx; const cy = key.h/2 + cfg.fty;
+        
+        if(cfg.tstyle === 'emboss') { 
+            tCtx.fillStyle = 'rgba(0,0,0,0.6)'; tCtx.fillText(key.char, cx + 1.5, cy + 1.5); 
+            tCtx.fillStyle = `rgba(255,255,255, 0.6)`; tCtx.fillText(key.char, cx - 1, cy - 1); 
+            tCtx.fillStyle = cfg.tc; tCtx.fillText(key.char, cx, cy);
+        }
+        else if(cfg.tstyle === 'engrave') { 
+            tCtx.fillStyle = `rgba(255,255,255, 0.7)`; tCtx.fillText(key.char, cx + 1, cy + 1); 
+            tCtx.fillStyle = 'rgba(0,0,0,0.8)'; tCtx.fillText(key.char, cx - 1.5, cy - 1.5); 
+            tCtx.fillStyle = cfg.tc; tCtx.fillText(key.char, cx, cy); 
+        }
+        else { tCtx.fillStyle = cfg.tc; tCtx.fillText(key.char, cx, cy); }
+        tCtx.restore();
+    }
+
+    document.getElementById('export-zip').onclick = async () => {
+        if(renderLayout.keys.length === 0) { alert("没有可导出的按键，请确保已导入配置。"); return; }
+        const zip = new JSZip(); 
+        const btn = document.getElementById('export-zip'); 
+        btn.disabled = true; btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> 打包中...";
+        
+        try {
+            zip.file("示例.custom.yaml", ""); 
+            const eCanvas = document.getElementById('export-canvas'); const eCtx = eCanvas.getContext('2d');
+            
+            const exportPad = parseInt(document.getElementById('export_pad').value) || 0;
+            const z = renderLayout.zones;
+
+            if (z.toolbar.h > 0) {
+                eCanvas.width = z.fullW; eCanvas.height = z.toolbar.h;
+                eCtx.clearRect(0, 0, eCanvas.width, eCanvas.height);
+                eCtx.drawImage(bgCanvas, PADDING, PADDING + z.toolbar.y, z.fullW, z.toolbar.h, 0, 0, z.fullW, z.toolbar.h);
+                const blob = await new Promise(r => eCanvas.toBlob(r, 'image/png'));
+                zip.file(`${currentSkinName}_toolbar_bg.png`, blob);
+            }
+
+            if (z.main.h > 0) {
+                let kbHeight = z.main.h + z.padding.h;
+                eCanvas.width = z.fullW; eCanvas.height = kbHeight;
+                eCtx.clearRect(0, 0, eCanvas.width, eCanvas.height);
+                eCtx.drawImage(bgCanvas, PADDING, PADDING + z.main.y, z.fullW, kbHeight, 0, 0, z.fullW, kbHeight);
+                const blob = await new Promise(r => eCanvas.toBlob(r, 'image/png'));
+                zip.file(`${currentSkinName}_keyboard_bg.png`, blob);
+            }
+
+            for(let i=0; i<renderLayout.keys.length; i++) {
+                const key = renderLayout.keys[i];
+                eCanvas.width = key.w + exportPad * 2; 
+                eCanvas.height = key.h + exportPad * 2; 
+                eCtx.clearRect(0,0, eCanvas.width, eCanvas.height);
+                
+                eCtx.save(); 
+                eCtx.translate(exportPad, exportPad); 
+                drawFlat(eCtx, key); drawText(eCtx, key); 
+                eCtx.restore();
+                
+                const blob = await new Promise(r => eCanvas.toBlob(r, 'image/png'));
+                let safeKeyId = String(key.id).replace(/[^a-zA-Z0-9_\u4e00-\u9fa5]/g, '') || `key_index_${i}`;
+                zip.file(`${currentSkinName}_${safeKeyId}.png`, blob);
+            }
+
+            const content = await zip.generateAsync({type: "blob"});
+            const link = document.createElement('a'); 
+            link.href = URL.createObjectURL(content); 
+            link.download = `${currentSkinName}_skin_demo.zip`; 
+            link.click();
+        } catch(e) { console.error(e); alert("打包失败！"); } 
+        finally { btn.disabled = false; btn.innerHTML = '<i class="fas fa-file-zipper"></i> 打包导出'; }
+    };
+
+    document.getElementById('export-png').onclick = () => {
+        const link = document.createElement('a'); link.download = `preview_demo.png`; link.href = canvas.toDataURL('image/png'); link.click();
+    };
+
+    window.onload = () => {
+        changePhoneRatio(); updateLayout(); updateConfig();
+        setTimeout(() => {
+            addChatMessage('left', '👋 欢迎体验键帽工坊！<br>（带 🔒 功能为待完善内容）。');
+        }, 500);
+    };
+</script>
+</body>
+</html>
