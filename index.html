@@ -851,14 +851,17 @@
             try {
                 let rawText = e.target.result;
             
-                rawText = rawText.replace(/&([a-zA-Z0-9_]+)[ \t]+([^\s#\n\r]+)/g, '"_DEF_$1_ $2"');
-                
-                rawText = rawText.replace(/\*([a-zA-Z0-9_]+)/g, '"_REF_$1_"');
-                const doc = jsyaml.load(rawText);
+                rawText = rawText.replace(/&[a-zA-Z0-9_]+[ \t]*/g, '');
+                rawText = rawText.replace(/\*([a-zA-Z0-9_]+)/g, '"*REF_$1"');
+                const doc = jsyaml.load(rawText, {
+                    json: true // 在某些情况下能提高容错率
+                });
                 processYamlData(doc);
                 addChatMessage('system', `✅ 成功导入文件：<b>${file.name}</b><br>点击上方切换查看高清渲染效果！`);
                 switchViewMode('phone');
-            } catch (err) { alert("解析失败: " + err.message); }
+            } catch (err) { 
+                addChatMessage('system', `❌ 解析失败: <br><small>${err.message}</small>`);
+            }
         };
         reader.readAsText(file); event.target.value = '';
     }
@@ -912,17 +915,18 @@
     }
 
     function resolveKeyData(keyConfig) {
-        let final = { ...keyConfig };
-        if (final.click && state.preset_keys[final.click]) {
-            const preset = state.preset_keys[final.click];
-            if (typeof preset === 'object') final = { ...final, ...preset };
-            else if (typeof preset === 'string') final.label = preset;
-        }
-        if (final.label && typeof final.label === 'string' && typeof state.preset_keys[final.label] === 'object') {
-            final.label = state.preset_keys[final.label].default || final.label;
-        }
-        return final;
+    let final = { ...keyConfig };
+    
+    if (final.click !== undefined && state.preset_keys[final.click] !== undefined) {
+        const preset = state.preset_keys[final.click];
+        if (typeof preset === 'object') final = { ...final, ...preset };
+        else if (typeof preset === 'string') final.label = preset;
     }
+    if (final.label && typeof final.label === 'string' && typeof state.preset_keys[final.label] === 'object') {
+        final.label = state.preset_keys[final.label].default || final.label;
+    }
+    return final;
+}
 
     function switchLayout(val) { currentLayout = val; updateLayout(); if(viewMode==='canvas') switchViewMode('canvas'); }
 
@@ -1005,24 +1009,26 @@
                 const keyW = (k.cWidth / 100) * phoneW;
                 const px = currentX + gapX/2, py = currentY, pw = keyW - gapX, ph = rowH;
 
-                if (k.click || k.label) {
+                if (k.click !== undefined || k.label !== undefined) {
                     const el = document.createElement('div'); el.className = 'phone-dom-key';
                     el.style.left = `${px}px`; el.style.top = `${py}px`; el.style.width = `${pw}px`; el.style.height = `${ph}px`;
                     el.style.borderRadius = `${s.round_corner}px`;
-                    el.onclick = () => addChatMessage('right', `测试点击: [ ${k.label || k.click || ''} ]`);
-                    domLayer.appendChild(el);
 
+                    const displayLabel = k.label ?? k.click ?? '';
+                    el.onclick = () => addChatMessage('right', `测试点击: [ ${displayLabel} ]`);
+                    domLayer.appendChild(el);
+            
                     if (!isHDSynced) {
                         pCtx.fillStyle = (k.functional || k.width > 15) ? '#cbd5e1' : '#ffffff';
                         pCtx.beginPath(); pCtx.roundRect(px, py, pw, ph, s.round_corner); pCtx.fill();
                         pCtx.fillStyle = '#334155'; pCtx.font = `bold ${s.key_text_size}px sans-serif`;
                         pCtx.textAlign = 'center'; pCtx.textBaseline = 'middle';
-                        pCtx.fillText(k.label || k.click || '', px + pw/2, py + ph/2);
+                        pCtx.fillText(displayLabel, px + pw/2, py + ph/2);
                     }
 
                     renderLayout.keys.push({
-                        id: k.click || k.label || 'key',
-                        char: k.label || k.text || k.click || '',
+                        id: k.click ?? k.label ?? 'key', 
+                        char: k.label ?? k.text ?? k.click ?? '', 
                         x: PADDING + px * HD_SCALE, 
                         y: PADDING + (TOOLBAR_H + py) * HD_SCALE, 
                         w: pw * HD_SCALE, 
