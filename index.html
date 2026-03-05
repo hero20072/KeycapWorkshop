@@ -794,7 +794,9 @@
         reader.onload = (e) => {
             try {
                 let rawText = e.target.result;
-                rawText = rawText.replace(/&([a-zA-Z0-9_]+)\s+([^\s#\n\r]+)/g, '"_DEF_$1_ $2"');
+            
+                rawText = rawText.replace(/&([a-zA-Z0-9_]+)[ \t]+([^\s#\n\r]+)/g, '"_DEF_$1_ $2"');
+                
                 rawText = rawText.replace(/\*([a-zA-Z0-9_]+)/g, '"_REF_$1_"');
                 const doc = jsyaml.load(rawText);
                 processYamlData(doc);
