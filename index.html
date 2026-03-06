@@ -1118,8 +1118,9 @@ row.keys.forEach(k => {
         }
 
         renderLayout.keys.push({
+            name: k.click || k.label || 'key', 
             char: k.label ?? k.text ?? k.click ?? '', 
-            x: PADDING + px * HD_SCALE, 
+            x: PADDING + px * HD_SCALE,
             y: PADDING + (TOOLBAR_H + py) * HD_SCALE, 
             w: pw * HD_SCALE, 
             h: ph * HD_SCALE
@@ -1390,7 +1391,8 @@ row.keys.forEach(k => {
                 const key = renderLayout.keys[i];
                 eCanvas.width = key.w + exportPad * 2; 
                 eCanvas.height = key.h + exportPad * 2; 
-                let safeKeyId = String(key.id).replace(/[^a-zA-Z0-9_\u4e00-\u9fa5]/g, '') || `key_index_${i}`;
+                let safeName = String(key.name || 'key').replace(/[^a-zA-Z0-9_\u4e00-\u9fa5]/g, '');
+                let safeKeyId = `${safeName}_${i}`;
 
                 eCtx.clearRect(0,0, eCanvas.width, eCanvas.height);
                 eCtx.save(); 
