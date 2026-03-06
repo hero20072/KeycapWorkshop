@@ -12,6 +12,16 @@
     <script defer src="https://cloud.umami.is/script.js" data-website-id="17f839b2-a44f-434e-9c34-68ba8362b154"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/geometries/RoundedBoxGeometry.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+
 
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -226,9 +236,8 @@
         .bubble-right { background: #95ec69; }
         .bubble-code { background: #ffffff; color: #334155; font-family: monospace; font-size: 12px; border: 1px solid #e2e8f0; }
         .toolbar { height: 44px; background: #ecf1f8; border-top: 1px solid #94a3b8; display: flex; align-items: center; padding: 0 16px; gap: 20px; font-size: 22px; flex-shrink: 0; color:#444;}
-        #global-keyboard-container { width: 100%; background: #ecf1f8; flex-shrink: 0; position: relative; }
-
         
+        #global-keyboard-container { width: 100%; background: #ecf1f8; flex-shrink: 0; position: relative; }
         .phone-dom-key { 
             cursor: pointer; z-index: 2; transition: transform 0.05s, background-color 0.1s; 
             border-radius: 8px; box-sizing: border-box; 
@@ -246,6 +255,21 @@
         #mainCanvas:hover { box-shadow: 0 30px 70px rgba(255, 138, 107, 0.2), 0 0 0 2px rgba(255, 138, 107, 0.3); }
         #export-canvas { display: none; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        /* 3D 悬浮设置面板 */
+        .panel-3d {
+            position: absolute; top: 20px; right: 20px;
+            background: rgba(21, 26, 33, 0.85); backdrop-filter: blur(12px);
+            padding: 20px; border-radius: 16px; border: 1px solid var(--border-glow);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+            width: 260px; z-index: 100; display: flex; flex-direction: column; gap: 12px;
+            color: var(--text-light); transition: 0.3s;
+        }
+        .panel-3d h3 { font-size: 1rem; color: var(--accent-secondary); margin-bottom: 5px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; display: flex; align-items: center; gap: 8px;}
+        .panel-3d .ctrl-row { background: transparent; border: none; padding: 0; margin: 0; }
+        .panel-3d input[type="range"] { flex: 1.5; }
+    
+    
+    
     </style>
 </head>
 <body>
@@ -519,9 +543,9 @@
                 </div>
             </div>
         </details>
-
         <details>
             <summary><i class="fas fa-hand-pointer icon-main"></i> 8. 按键按下
+    
                 <span style="
                     margin-left: auto;
                     font-size: 0.65rem;
@@ -548,7 +572,7 @@
                 <div class="ctrl-row">
                     <label>按下预设</label>
                     <select id="pressed_preset" style="width: 60%; color: var(--accent-primary); font-weight: bold;" onchange="updateConfig()">
-                        <option value="glow" selected>电竞荧光</option>
+                        <option value="glow" selected>电竞荧光 (自发光)</option>
                     </select>
                 </div>
 
@@ -558,7 +582,7 @@
                         <input type="color" id="pressed_glow_color" value="#00FFFF" onchange="updateConfig()">
                     </div>
                     <div class="ctrl-row">
-                        <label>扩散强度</label>
+                        <label>发光强度 (扩散)</label>
                         <input type="range" id="pressed_glow_blur" min="0" max="50" value="30">
                         <span class="val-disp"></span>
                     </div>
@@ -568,7 +592,7 @@
                         <span class="val-disp"></span>
                     </div>
                     <div class="ctrl-row">
-                        <label>边缘宽度</label>
+                        <label>发光边缘宽度</label>
                         <input type="range" id="pressed_glow_width" min="0" max="10" step="0.5" value="2">
                         <span class="val-disp"></span>
                     </div>
@@ -596,6 +620,29 @@
         <button class="tab-btn" id="tab-canvas" onclick="switchViewMode('canvas')">
             <i class="fas fa-brush"></i> 高清渲染
         </button>
+       <button class="tab-btn" id="tab-3d" onclick="switchViewMode('3d')" style="
+            display: flex;         
+            align-items: center;    
+            justify-content: flex-start; 
+            gap: 8px;              
+        ">
+            <i class="fas fa-cube"></i> 3D渲染
+            <span style="
+                margin-left: auto;
+                font-size: 0.65rem;
+                padding: 2px 6px;
+                background: linear-gradient(135deg, #FF8A6B, #FF5C35);
+                color: #000;
+                border-radius: 10px;
+                font-weight: 800;
+                letter-spacing: 0.5px;
+                text-transform: uppercase;
+                box-shadow: 0 0 10px rgba(255, 138, 107, 0.4);
+                display: inline-flex;
+                align-items: center;
+                height: 18px;
+            ">beta</span>
+        </button>
     </div>
 
     <!--手机模拟 -->
@@ -622,6 +669,41 @@
         <canvas id="mainCanvas"></canvas>
     </div>
     <canvas id="export-canvas"></canvas>
+
+    <div class="view-container" id="view-3d" style="display: none;">
+        <div id="container-3d" style="width: 90%; height: 85%; border-radius: 24px; overflow: hidden; box-shadow: var(--shadow-heavy); border: 1px solid rgba(255, 138, 107, 0.2);">
+
+        </div>
+        <!-- 修改后的悬浮控制面板 -->
+        <div class="panel-3d">
+            <h3><i class="fas fa-sliders-h"></i> 3D 键帽参数</h3>
+            <div class="ctrl-row">
+                <label>键帽高度</label>
+                <input type="range" id="c3d_height" min="2" max="30" value="6" oninput="this.nextElementSibling.innerText=this.value" onchange="render3DKeyboard()">
+                <span class="val-disp">12</span>
+            </div>
+            <div class="ctrl-row">
+                <label>顶面大小</label>
+                <input type="range" id="c3d_top" min="40" max="100" value="70" oninput="this.nextElementSibling.innerText=this.value" onchange="render3DKeyboard()">
+                <span class="val-disp">70</span>
+            </div>
+            <div class="ctrl-row">
+                <label>底座大小</label>
+                <input type="range" id="c3d_base" min="60" max="100" value="100" oninput="this.nextElementSibling.innerText=this.value" onchange="render3DKeyboard()">
+                <span class="val-disp">95</span>
+            </div>
+            <div class="ctrl-row">
+                <label>边缘圆润</label>
+                <input type="range" id="c3d_radius" min="0" max="50" value="8" oninput="this.nextElementSibling.innerText=this.value" onchange="render3DKeyboard()">
+                <span class="val-disp">20</span>
+            </div>
+            <div class="ctrl-row" style="margin-top: 5px;">
+                <label style="cursor:pointer; display:flex; gap:8px; align-items:center; color: var(--accent-primary);">
+                    <input type="checkbox" id="c3d_show_text" checked onchange="render3DKeyboard()" style="width:16px; height:16px;"> 显示按键文字
+                </label>
+            </div>
+        </div>
+    </div>
 
 </main>
 
@@ -791,9 +873,14 @@
         viewMode = mode;
         document.getElementById('view-phone').style.display = mode === 'phone' ? 'flex' : 'none';
         document.getElementById('view-canvas').style.display = mode === 'canvas' ? 'flex' : 'none';
+        document.getElementById('view-3d').style.display = mode === '3d' ? 'flex' : 'none';
+        
         document.getElementById('tab-phone').classList.toggle('active', mode === 'phone');
         document.getElementById('tab-canvas').classList.toggle('active', mode === 'canvas');
+        document.getElementById('tab-3d').classList.toggle('active', mode === '3d');
+        
         if(mode === 'canvas') updateConfig();
+        if(mode === '3d') render3DKeyboard(); // 触发 3D 渲染
     }
 
     document.getElementById('font-upload').addEventListener('change', async function(e) {
@@ -853,18 +940,20 @@
         reader.onload = (e) => {
             try {
                 let rawText = e.target.result;
-            
                 rawText = rawText.replace(/&[a-zA-Z0-9_]+[ \t]*/g, '');
+
                 rawText = rawText.replace(/\*([a-zA-Z0-9_]+)/g, '"*REF_$1"');
+                
                 const doc = jsyaml.load(rawText, {
-                    json: true // 在某些情况下能提高容错率
+                    json: true 
                 });
+                
                 processYamlData(doc);
                 addChatMessage('system', `✅ 成功导入文件：<b>${file.name}</b><br>点击上方切换查看高清渲染效果！`);
                 switchViewMode('phone');
-            } catch (err) { 
-                addChatMessage('system', `❌ 解析失败: <br><small>${err.message}</small>`);
-            }
+            } catch (err) {
+                console.error(err);
+                addChatMessage('system', `❌ 解析失败: <br><small>${err.message}</small>`); }
         };
         reader.readAsText(file); event.target.value = '';
     }
@@ -917,9 +1006,8 @@
         });
     }
 
-    function resolveKeyData(keyConfig) {
+function resolveKeyData(keyConfig) {
     let final = { ...keyConfig };
-    
     if (final.click !== undefined && state.preset_keys[final.click] !== undefined) {
         const preset = state.preset_keys[final.click];
         if (typeof preset === 'object') final = { ...final, ...preset };
@@ -1008,42 +1096,42 @@
         rows.forEach((row, rowIndex) => {
             const rowH = rowHeights[rowIndex];
             let currentX = 0;
-            row.keys.forEach(k => {
-                const keyW = (k.cWidth / 100) * phoneW;
-                const px = currentX + gapX/2, py = currentY, pw = keyW - gapX, ph = rowH;
+row.keys.forEach(k => {
+    const keyW = (k.cWidth / 100) * phoneW;
+    const px = currentX + gapX/2, py = currentY, pw = keyW - gapX, ph = rowH;
 
-                if (k.click !== undefined || k.label !== undefined) {
-                    const el = document.createElement('div'); el.className = 'phone-dom-key';
-                    el.style.left = `${px}px`; el.style.top = `${py}px`; el.style.width = `${pw}px`; el.style.height = `${ph}px`;
-                    el.style.borderRadius = `${s.round_corner}px`;
+    if (k.click !== undefined || k.label !== undefined) {
+        const el = document.createElement('div'); el.className = 'phone-dom-key';
+        el.style.left = `${px}px`; el.style.top = `${py}px`; el.style.width = `${pw}px`; el.style.height = `${ph}px`;
+        el.style.borderRadius = `${s.round_corner}px`;
+        
+        const displayLabel = k.label ?? k.click ?? '';
+        el.onclick = () => addChatMessage('right', `测试点击: [ ${displayLabel} ]`);
+        domLayer.appendChild(el);
 
-                    const displayLabel = k.label ?? k.click ?? '';
-                    el.onclick = () => addChatMessage('right', `测试点击: [ ${displayLabel} ]`);
-                    domLayer.appendChild(el);
-            
-                    if (!isHDSynced) {
-                        pCtx.fillStyle = (k.functional || k.width > 15) ? '#cbd5e1' : '#ffffff';
-                        pCtx.beginPath(); pCtx.roundRect(px, py, pw, ph, s.round_corner); pCtx.fill();
-                        pCtx.fillStyle = '#334155'; pCtx.font = `bold ${s.key_text_size}px sans-serif`;
-                        pCtx.textAlign = 'center'; pCtx.textBaseline = 'middle';
-                        pCtx.fillText(displayLabel, px + pw/2, py + ph/2);
-                    }
+        if (!isHDSynced) {
+            pCtx.fillStyle = (k.functional || k.width > 15) ? '#cbd5e1' : '#ffffff';
+            pCtx.beginPath(); pCtx.roundRect(px, py, pw, ph, s.round_corner); pCtx.fill();
+            pCtx.fillStyle = '#334155'; pCtx.font = `bold ${s.key_text_size}px sans-serif`;
+            pCtx.textAlign = 'center'; pCtx.textBaseline = 'middle';
+            pCtx.fillText(displayLabel, px + pw/2, py + ph/2);
+        }
 
-                    renderLayout.keys.push({
-                        id: k.click ?? k.label ?? 'key', 
-                        char: k.label ?? k.text ?? k.click ?? '', 
-                        x: PADDING + px * HD_SCALE, 
-                        y: PADDING + (TOOLBAR_H + py) * HD_SCALE, 
-                        w: pw * HD_SCALE, 
-                        h: ph * HD_SCALE
-                    });
-                }
-                currentX += keyW;
-            });
+        renderLayout.keys.push({
+            char: k.label ?? k.text ?? k.click ?? '', 
+            x: PADDING + px * HD_SCALE, 
+            y: PADDING + (TOOLBAR_H + py) * HD_SCALE, 
+            w: pw * HD_SCALE, 
+            h: ph * HD_SCALE
+        });
+    }
+    currentX += keyW;
+});
             currentY += rowH + scaledVerticalGap;
         });
 
         if (isHDSynced) updateConfig(); 
+        if (viewMode === '3d') render3DKeyboard();
     }
 
     function syncToPhonePreview() {
@@ -1053,9 +1141,9 @@
             const pCtx = phoneCanvas.getContext('2d');
             pCtx.clearRect(0, 0, phoneCanvas.width, phoneCanvas.height);
             const TOOLBAR_H_HD = 44 * HD_SCALE; 
-            
             pCtx.drawImage(canvas, PADDING, PADDING + TOOLBAR_H_HD, canvas.width - PADDING * 2, canvas.height - PADDING * 2 - TOOLBAR_H_HD, 0, 0, phoneCanvas.width, phoneCanvas.height);
-        }        
+        }
+
         const toolbarDiv = document.querySelector('.toolbar');
         if (toolbarDiv) {
             const tCan = document.createElement('canvas');
@@ -1063,7 +1151,7 @@
             tCan.width = canvas.width - PADDING * 2;
             tCan.height = TOOLBAR_H_HD;
             const tCtx = tCan.getContext('2d');
-                        
+            
             tCtx.drawImage(canvas, 
                 PADDING, PADDING, tCan.width, tCan.height,
                 0, 0, tCan.width, tCan.height
@@ -1111,6 +1199,7 @@
         };
         
         prepareBackground(); requestAnimationFrame(render);
+        if (viewMode === '3d') render3DKeyboard();
     }
 
     document.getElementById('imgFile').onchange = (e) => {
@@ -1130,7 +1219,6 @@
         bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
         keyBgCtx.clearRect(0, 0, keyBgCanvas.width, keyBgCanvas.height);
         
-        // 基础黑色底
         bgCtx.fillStyle = "#1e1e1e";
         bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
         keyBgCtx.fillStyle = "#1e1e1e";
@@ -1156,9 +1244,7 @@
         }
     }
 
-
     function getPressedConfig(key, baseCfg) {
-
         const isPressed = key.isPressed || document.getElementById('chk_global_pressed').checked;
         if (!isPressed) return baseCfg;
 
@@ -1176,7 +1262,6 @@
 
             newCfg.isGlowMode = true;
             newCfg.customShadowColor = rgba;
-
             newCfg.bgColor = { r: Math.floor(rgb.r*0.8), g: Math.floor(rgb.g*0.8), b: Math.floor(rgb.b*0.8) };
             newCfg.sideColor = gColorHex;
             
@@ -1201,7 +1286,6 @@
 
         renderLayout.keys.forEach(k => {
             ctx.save(); ctx.translate(k.x, k.y);
-
             const currentCfg = getPressedConfig(k, cfg);
             drawFlat(ctx, k, currentCfg); 
             drawText(ctx, k, currentCfg); 
@@ -1210,12 +1294,10 @@
         syncToPhonePreview();
     }
 
-
     function drawFlat(tCtx, key, currentCfg) {
         tCtx.save();
         const cR = currentCfg.bgColor.r, cG = currentCfg.bgColor.g, cB = currentCfg.bgColor.b;
         
-
         const shadowColor = currentCfg.isGlowMode ? currentCfg.customShadowColor : `rgba(0,0,0,${currentCfg.fSd})`;
         tCtx.shadowColor = shadowColor; 
         tCtx.shadowBlur = currentCfg.isGlowMode ? currentCfg.gBlur * 1.5 : 20; 
@@ -1231,7 +1313,6 @@
         
         tCtx.fillStyle = `rgba(${cR}, ${cG}, ${cB}, ${currentCfg.gOp})`; tCtx.fill();
         
-
         if (!currentCfg.isGlowMode && currentCfg.fHl > 0) {
             const grad = tCtx.createLinearGradient(0,0, key.w, key.h);
             grad.addColorStop(0, `rgba(255,255,255,${currentCfg.fHl})`); 
@@ -1250,14 +1331,12 @@
         tCtx.restore(); 
     }
 
-
     function drawText(tCtx, key, currentCfg) {
         tCtx.save();
         tCtx.font = `normal ${currentCfg.fontWeight} ${currentCfg.fz}px "${currentCfg.font}"`; 
         tCtx.textAlign = "center"; tCtx.textBaseline = "middle";
         const cx = key.w/2 + currentCfg.ftx; const cy = key.h/2 + currentCfg.fty;
         
-        // 字体发光处理
         if (currentCfg.isGlowMode) {
             tCtx.shadowColor = currentCfg.tsColor;
             tCtx.shadowBlur = currentCfg.tsBlur;
@@ -1307,13 +1386,11 @@
                 zip.file(`${currentSkinName}_keyboard_bg.png`, blob);
             }
 
-
             for(let i=0; i<renderLayout.keys.length; i++) {
                 const key = renderLayout.keys[i];
                 eCanvas.width = key.w + exportPad * 2; 
                 eCanvas.height = key.h + exportPad * 2; 
                 let safeKeyId = String(key.id).replace(/[^a-zA-Z0-9_\u4e00-\u9fa5]/g, '') || `key_index_${i}`;
-
 
                 eCtx.clearRect(0,0, eCanvas.width, eCanvas.height);
                 eCtx.save(); 
@@ -1349,6 +1426,205 @@
     document.getElementById('export-png').onclick = () => {
         const link = document.createElement('a'); link.download = `preview_demo.png`; link.href = canvas.toDataURL('image/png'); link.click();
     };
+    let scene3D, camera3D, renderer3D, controls3D, keyboardGroup3D;
+    let is3DInitialized = false;
+
+    function init3DEnvironment() {
+        const container = document.getElementById('container-3d');
+        
+        scene3D = new THREE.Scene();
+        scene3D.background = new THREE.Color(0x1B222B); 
+        
+        camera3D = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+        camera3D.position.set(0, 150, 200); 
+
+        renderer3D = new THREE.WebGLRenderer({ antialias: true });
+        renderer3D.setSize(container.clientWidth, container.clientHeight);
+        renderer3D.shadowMap.enabled = true;
+        renderer3D.shadowMap.type = THREE.PCFSoftShadowMap;
+        container.appendChild(renderer3D.domElement);
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4); 
+        scene3D.add(ambientLight);
+        
+        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.5);
+        hemiLight.position.set(0, 200, 0);
+        scene3D.add(hemiLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.6); 
+        dirLight.position.set(30, 80, 50);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 2048;
+        dirLight.shadow.mapSize.height = 2048;
+        dirLight.shadow.bias = -0.001; 
+        scene3D.add(dirLight);
+
+        controls3D = new THREE.OrbitControls(camera3D, renderer3D.domElement);
+        controls3D.enableDamping = true;
+        controls3D.dampingFactor = 0.05;
+        controls3D.maxPolarAngle = Math.PI / 2 - 0.05; 
+
+        keyboardGroup3D = new THREE.Group();
+        scene3D.add(keyboardGroup3D);
+
+        window.addEventListener('resize', () => {
+            if (viewMode !== '3d') return;
+            camera3D.aspect = container.clientWidth / container.clientHeight;
+            camera3D.updateProjectionMatrix();
+            renderer3D.setSize(container.clientWidth, container.clientHeight);
+        });
+
+        function animate() {
+            requestAnimationFrame(animate);
+            if (viewMode === '3d') {
+                controls3D.update();
+                renderer3D.render(scene3D, camera3D);
+            }
+        }
+        animate();
+        
+        is3DInitialized = true;
+    }
+
+    function generateGlobalLayoutTexture(totalW, totalH, minX, minY) {
+        const resolution = 4; 
+        const texCanvas = document.createElement('canvas');
+        texCanvas.width = totalW * resolution;
+        texCanvas.height = totalH * resolution;
+        const ctx = texCanvas.getContext('2d');
+
+        ctx.fillStyle = document.getElementById('c_base_color').value;
+        ctx.fillRect(0, 0, texCanvas.width, texCanvas.height);
+
+        if (keyBgCanvas && keyBgCanvas.width > 0) {
+            ctx.drawImage(keyBgCanvas, 0, 0, keyBgCanvas.width, keyBgCanvas.height, 0, 0, texCanvas.width, texCanvas.height);
+        }
+
+        if (document.getElementById('c3d_show_text').checked) {
+            const fontName = document.getElementById('c_font').value;
+            const fontWeight = document.getElementById('c_font_weight').value;
+            const fontSize = (parseFloat(document.getElementById('c_fz').value) || 60) * resolution;
+            const fontColor = document.getElementById('c_tc').value;
+            const ftx = (parseFloat(document.getElementById('c_ftx').value) || 0) * resolution;
+            const fty = (parseFloat(document.getElementById('c_fty').value) || 0) * resolution;
+
+            ctx.fillStyle = fontColor;
+            ctx.font = `${fontWeight} ${fontSize}px "${fontName}", sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            renderLayout.keys.forEach(k => {
+                if (!k.char) return;
+                const localX = (k.x - minX) * resolution; 
+                const localY = (k.y - minY) * resolution; 
+                const kw = k.w * resolution;
+                const kh = k.h * resolution;
+
+                ctx.fillText(k.char, localX + kw / 2 + ftx, localY + kh / 2 + fty);
+            });
+        }
+
+        const texture = new THREE.CanvasTexture(texCanvas);
+        texture.anisotropy = renderer3D.capabilities.getMaxAnisotropy();
+        return texture;
+    }
+
+    let camera3DSet = false;
+
+    function render3DKeyboard() {
+        if (!is3DInitialized) init3DEnvironment();
+
+        while(keyboardGroup3D.children.length > 0){ 
+            keyboardGroup3D.remove(keyboardGroup3D.children[0]); 
+        }
+
+        if (!renderLayout || !renderLayout.keys || renderLayout.keys.length === 0) return;
+
+        const keyHeight = parseFloat(document.getElementById('c3d_height').value);
+        const topScale = parseFloat(document.getElementById('c3d_top').value) / 100;
+        const baseScale = parseFloat(document.getElementById('c3d_base').value) / 100;
+        const radiusFactor = parseFloat(document.getElementById('c3d_radius').value) / 100;
+        const scale3D = 0.1; 
+
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        renderLayout.keys.forEach(k => {
+            if (k.x < minX) minX = k.x;
+            if (k.x + k.w > maxX) maxX = k.x + k.w;
+            if (k.y < minY) minY = k.y;
+            if (k.y + k.h > maxY) maxY = k.y + k.h;
+        });
+        const totalW = maxX - minX;
+        const totalH = maxY - minY;
+
+        const globalTexture = generateGlobalLayoutTexture(totalW, totalH, minX, minY);
+        const globalMaterial = new THREE.MeshStandardMaterial({ 
+            map: globalTexture, 
+            roughness: 0.85, 
+            metalness: 0.05 
+        });
+
+        const boardGeo = new THREE.RoundedBoxGeometry(totalW * scale3D + 10, 4, totalH * scale3D + 10, 4, 1.5);
+        const boardMat = new THREE.MeshStandardMaterial({ color: 0x1A1F25, roughness: 0.9 });
+        const board = new THREE.Mesh(boardGeo, boardMat);
+        board.position.y = -2; 
+        board.receiveShadow = true;
+        keyboardGroup3D.add(board);
+
+        renderLayout.keys.forEach(k => {
+            const w = k.w * scale3D * baseScale;
+            const h = k.h * scale3D * baseScale; 
+            const maxRadius = Math.min(w, h) / 2;
+            const radius = maxRadius * radiusFactor;
+            
+            const geometry = new THREE.RoundedBoxGeometry(w, keyHeight, h, 4, radius);
+            
+            const pos = geometry.attributes.position;
+            for (let i = 0; i < pos.count; i++) {
+                const y = pos.getY(i);
+                const heightProgress = (y + (keyHeight / 2)) / keyHeight;
+                const currentScale = 1.0 - (1.0 - topScale) * heightProgress;
+                pos.setX(i, pos.getX(i) * currentScale);
+                pos.setZ(i, pos.getZ(i) * currentScale);
+            }
+            geometry.computeVertexNormals();
+
+            const uvAttribute = geometry.attributes.uv;
+            
+            const keyCenterX = k.x - minX + k.w / 2;
+            const keyCenterY = k.y - minY + k.h / 2;
+
+            for (let i = 0; i < uvAttribute.count; i++) {
+                const lx = pos.getX(i) / scale3D; 
+                const lz = pos.getZ(i) / scale3D; 
+                const worldX = keyCenterX + lx;
+                const worldY = keyCenterY + lz;
+
+                const u = worldX / totalW;
+                const v = 1.0 - (worldY / totalH);
+
+                uvAttribute.setXY(i, u, v);
+            }
+            uvAttribute.needsUpdate = true; 
+
+            const keyMesh = new THREE.Mesh(geometry, globalMaterial);
+            
+            const x3d = (k.x - minX - totalW / 2 + k.w / 2) * scale3D;
+            const z3d = (k.y - minY - totalH / 2 + k.h / 2) * scale3D;
+            
+            keyMesh.position.set(x3d, keyHeight / 2, z3d);
+            keyMesh.castShadow = true;
+            keyMesh.receiveShadow = true;
+            
+            keyboardGroup3D.add(keyMesh);
+        });
+
+        if (!camera3DSet) {
+            camera3D.position.set(0, Math.max(totalW, totalH) * scale3D * 0.8, Math.max(totalW, totalH) * scale3D * 0.6);
+            controls3D.target.set(0, 0, 0);
+            camera3DSet = true;
+        }
+        controls3D.update();
+    }
 
     window.onload = () => {
         changePhoneRatio(); updateLayout(); updateConfig();
