@@ -272,10 +272,65 @@
             from { opacity: 0; transform: translateY(-10px) scale(0.9); }
             to { opacity: 1; transform: translateY(0) scale(1); }
         }
+
+        .quick-scroll-nav {
+            position: fixed;
+            left: 500px; 
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            background: var(--bg-secondary, #1e293b); 
+            padding: 15px 8px;
+            border-radius: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            z-index: 1000;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+    
+        .quick-scroll-nav .nav-item {
+            color: var(--text-dim, #94a3b8);
+            font-size: 14px;
+            font-weight: bold;
+            font-family: monospace;
+            width: 28px;
+            height: 28px;
+            line-height: 28px;
+            text-align: center;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            user-select: none;
+            background: rgba(0,0,0,0.2);
+        }
+        
+        .quick-scroll-nav .nav-item:hover {
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+        }
+        
+        .quick-scroll-nav .nav-item.active {
+            background: var(--accent-primary, #10b981);
+            color: #fff;
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+            transform: scale(1.1);
+        }
     
     </style>
 </head>
 <body>
+
+    <div id="quick-scroll-nav" class="quick-scroll-nav">
+    <div class="nav-item active" data-target="sec-1" title="1. 原始数据">1</div>
+    <div class="nav-item" data-target="sec-2" title="2. 添加图案">2</div>
+    <div class="nav-item" data-target="sec-3" title="3. 键帽材质">3</div>
+    <div class="nav-item" data-target="sec-4" title="4. 几何调整">4</div>
+    <div class="nav-item" data-target="sec-5" title="5. 颜色光影">5</div>
+    <div class="nav-item" data-target="sec-6" title="6. 按键文字">6</div>
+    <div class="nav-item" data-target="sec-7" title="7. 印花装饰">7</div>
+    <div class="nav-item" data-target="sec-8" title="8. 按下状态">8</div>
+</div>
 
 <aside class="sidebar">
     <div class="header">
@@ -294,7 +349,7 @@
     </div>
     <div class="controls" id="control-panel">
         
-        <details>
+         <details id="sec-1" class="scroll-section">
             <summary><i class="fas fa-file-import icon-main"></i> 1. 原始数据</summary>
             <div class="detail-content">
                 <button class="btn btn-primary" onclick="document.getElementById('yaml-upload').click()" style="width:100%">
@@ -340,7 +395,7 @@
             </div>
         </details>
 
-        <details>
+         <details id="sec-2" class="scroll-section">
             <summary><i class="fas fa-palette icon-main"></i> 2. 添加图案</summary>
             <div class="detail-content">
                 <div style="color: var(--accent-secondary); margin-bottom: 6px;">按键图案</div>
@@ -390,7 +445,7 @@
         </details>
 
 
-        <details>
+         <details id="sec-3" class="scroll-section">
             <summary><i class="fas fa-palette icon-main"></i> 3. 键帽材质</summary>
             <div class="detail-content">
                 <div class="ctrl-row">
@@ -424,7 +479,7 @@
         </details>
 
         
-        <details>
+         <details id="sec-4" class="scroll-section">
             <summary><i class="fas fa-vector-square icon-main"></i> 4. 几何调整</summary>
             <div class="detail-content">
                 <div class="ctrl-row">
@@ -455,7 +510,7 @@
             </div>
         </details>
 
-        <details>
+         <details id="sec-5" class="scroll-section">
             <summary><i class="fas fa-lightbulb icon-main"></i> 5. 颜色光影</summary>
             <div class="detail-content">
                 <div id="panel_flat_light" style="display:flex; flex-direction:column; gap:14px;">
@@ -476,7 +531,7 @@
             </div>
         </details>
 
-        <details>
+         <details id="sec-6" class="scroll-section">
             <summary><i class="fas fa-font icon-main"></i> 6. 按键文字</summary>
             <div class="detail-content">
                 <div class="ctrl-row" style="flex-wrap:wrap;">
@@ -520,7 +575,7 @@
             </div>
         </details>
 
-        <details>
+         <details id="sec-7" class="scroll-section">
             <summary>
                 <i class="fas fa-stamp icon-main"></i> 7. 印花装饰 
                 <i class="fas fa-lock lock-icon" style="margin-left:auto; color:var(--text-dim);" title="该功能后期开放"></i>
@@ -546,7 +601,7 @@
                 </div>
             </div>
         </details>
-        <details>
+         <details id="sec-8" class="scroll-section">
             <summary><i class="fas fa-hand-pointer icon-main"></i> 8. 按键按下
     
                 <span style="
