@@ -1750,6 +1750,46 @@ row.keys.forEach(k => {
             addChatMessage('left', '👋 欢迎体验键帽工坊！<br>（带 🔒 功能为待完善内容）。');
         }, 500);
     };
+
+    document.querySelectorAll('.quick-scroll-nav .nav-item').forEach(item => {
+    item.addEventListener('click', function() {
+        const targetId = this.getAttribute('data-target');
+        const targetElement = document.getElementById(targetId);
+        const controlsContainer = document.querySelector('.controls');
+        
+        if (targetElement) {
+            const offsetTop = targetElement.offsetTop - controlsContainer.offsetTop;
+            controlsContainer.scrollTo({
+                top: offsetTop,
+                behavior: 'smooth'
+            });
+
+     
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            this.classList.add('active');
+        }
+    });
+});
+
+document.querySelector('.controls').addEventListener('scroll', function() {
+    const sections = document.querySelectorAll('.scroll-section');
+    const navItems = document.querySelectorAll('.nav-item');
+    let current = '';
+
+    sections.forEach(section => {
+        const sectionTop = section.offsetTop - 200; 
+        if (this.scrollTop >= sectionTop) {
+            current = section.getAttribute('id');
+        }
+    });
+
+    navItems.forEach(item => {
+        item.classList.remove('active');
+        if (item.getAttribute('data-target') === current) {
+            item.classList.add('active');
+        }
+    });
+});
 </script>
 </body>
 </html>
