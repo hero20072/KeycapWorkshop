@@ -1022,26 +1022,82 @@
     function handleFileUpload(event) {
         const file = event.target.files[0];
         if (!file) return;
+        
         const reader = new FileReader();
         reader.onload = (e) => {
             try {
                 let rawText = e.target.result;
-                rawText = rawText.replace(/&[a-zA-Z0-9_]+[ \t]*/g, '');
+                
+                state.rawYamlText = rawText; 
 
-                rawText = rawText.replace(/\*([a-zA-Z0-9_]+)/g, '"*REF_$1"');
-                
-                const doc = jsyaml.load(rawText, {
-                    json: true 
+               
+                let textToParse = rawText.replace(/([*&][a-zA-Z0-9_]+)@([a-zA-Z0-9_]+)/g, '$1_AT_$2');
+
+               
+                let dummyCounter = 1;
+                textToParse = textToParse.replace(/^(\s*)([^\x00-\xffa-zA-Z0-9_]{1,2})(\s*:)/gm, (match, p1, p2, p3) => {
+                    return `${p1}${p2}_auto_${dummyCounter++}${p3}`;
                 });
+
+                let doc;
+                let retries = 30; 
                 
+                
+                while (retries > 0) {
+                    try {
+                        doc = jsyaml.load(textToParse);
+                        break; 
+                    } catch (err) {
+                        if (err.name === 'YAMLException') {
+                            
+                            if (err.message.includes('unidentified alias')) {
+                                const match = err.message.match(/unidentified alias "([^"]+)"/);
+                                if (match && match[1]) {
+                                    const aliasName = match[1];
+                                    const regex = new RegExp(`\\*${aliasName}\\b`, 'g');
+                                    textToParse = textToParse.replace(regex, `"_REF_${aliasName}_"`);
+                                    retries--;
+                                    continue;
+                                }
+                            }
+                            
+                            
+                            if (err.message.includes('duplicated mapping key')) {
+                                const match = err.message.match(/\((\d+):(\d+)\)/);
+                                if (match) {
+                                    const lineNum = parseInt(match[1]);
+                                    
+                                    const lines = textToParse.split('\n');
+                                    const errorLineCode = lines[lineNum - 1].trim();
+                                   
+                                   
+                                    throw new Error(
+                                        `<b>YAML 语法错误：属性重复</b><br><br>` +
+                                        `在文件的第 <b>${lineNum}</b> 行，发现有重复配置的参数。<br>` +
+                                        `出问题的代码片段：<br><code style="background:#333; padding:2px 4px; border-radius:4px; color:#ffcc00;">${errorLineCode}</code><br><br>` +
+                                        `<b>解决办法：</b><br>` +
+                                        `请使用文本编辑器打开您的 yaml 文件，找到第 ${lineNum} 行，删除多余的重复属性，然后重新导入。`
+                                    );
+                                }
+                            }
+                        }
+                        
+                        throw err; 
+                    }
+                }
+
+                if (!doc) throw new Error("文件严重损坏或包含无法自愈的致命语法错误。");
+
                 processYamlData(doc);
                 addChatMessage('system', `✅ 成功导入文件：<b>${file.name}</b><br>点击上方切换查看高清渲染效果！`);
                 switchViewMode('phone');
-            } catch (err) {
+            } catch (err) { 
                 console.error(err);
-                addChatMessage('system', `❌ 解析失败: <br><small>${err.message}</small>`); }
+                addChatMessage('system', `<span style="color:#ff4d4f;">❌ 解析失败</span><br>${err.message}`); 
+            }
         };
-        reader.readAsText(file); event.target.value = '';
+        reader.readAsText(file); 
+        event.target.value = '';
     }
 
     function processYamlData(doc) {
@@ -1742,7 +1798,7 @@ row.keys.forEach(k => {
             const panel = document.getElementById('donate-panel');
             panel.style.display = 'block';
         }
-    }, 60000); 
+    }, 90000); 
 
     window.onload = () => {
         changePhoneRatio(); updateLayout(); updateConfig();
