@@ -1027,29 +1027,27 @@
         reader.onload = (e) => {
             try {
                 let rawText = e.target.result;
-                
                 state.rawYamlText = rawText; 
 
-               
                 let textToParse = rawText.replace(/([*&][a-zA-Z0-9_]+)@([a-zA-Z0-9_]+)/g, '$1_AT_$2');
 
-               
                 let dummyCounter = 1;
                 textToParse = textToParse.replace(/^(\s*)([^\x00-\xffa-zA-Z0-9_]{1,2})(\s*:)/gm, (match, p1, p2, p3) => {
                     return `${p1}${p2}_auto_${dummyCounter++}${p3}`;
                 });
 
                 let doc;
-                let retries = 30; 
-                
-                
+                let retries = 100;
+                let dupCounter = 0; 
+                let showDuplicateWarning = false;
+
                 while (retries > 0) {
                     try {
                         doc = jsyaml.load(textToParse);
                         break; 
                     } catch (err) {
                         if (err.name === 'YAMLException') {
-                            
+                          
                             if (err.message.includes('unidentified alias')) {
                                 const match = err.message.match(/unidentified alias "([^"]+)"/);
                                 if (match && match[1]) {
@@ -1061,27 +1059,25 @@
                                 }
                             }
                             
-                            
                             if (err.message.includes('duplicated mapping key')) {
-                                const match = err.message.match(/\((\d+):(\d+)\)/);
-                                if (match) {
-                                    const lineNum = parseInt(match[1]);
-                                    
-                                    const lines = textToParse.split('\n');
-                                    const errorLineCode = lines[lineNum - 1].trim();
-                                   
-                                   
-                                    throw new Error(
-                                        `<b>YAML 语法错误：属性重复</b><br><br>` +
-                                        `在文件的第 <b>${lineNum}</b> 行，发现有重复配置的参数。<br>` +
-                                        `出问题的代码片段：<br><code style="background:#333; padding:2px 4px; border-radius:4px; color:#ffcc00;">${errorLineCode}</code><br><br>` +
-                                        `<b>解决办法：</b><br>` +
-                                        `请使用文本编辑器打开您的 yaml 文件，找到第 ${lineNum} 行，删除多余的重复属性，然后重新导入。`
-                                    );
+                                showDuplicateWarning = true;
+
+                                if (err.mark && err.mark.line !== undefined && err.mark.column !== undefined) {
+                                    const lineIdx = err.mark.line;
+                                    const colIdx = err.mark.column;
+                                    let lines = textToParse.split('\n');
+
+                                    if (lines[lineIdx]) {
+                                        dupCounter++;
+                                        lines[lineIdx] = lines[lineIdx].substring(0, colIdx) + `__DUP_${dupCounter}_` + lines[lineIdx].substring(colIdx);
+                                        textToParse = lines.join('\n');
+                                        retries--;
+                                        continue;
+                                    }
                                 }
                             }
                         }
-                        
+                      
                         throw err; 
                     }
                 }
@@ -1090,10 +1086,24 @@
 
                 processYamlData(doc);
                 addChatMessage('system', `✅ 成功导入文件：<b>${file.name}</b><br>点击上方切换查看高清渲染效果！`);
+                  
+                if (showDuplicateWarning) {
+                    const warningMsg = `
+                        <div style="color: #475569; margin-top: 5px; font-size: 0.8rem; line-height: 1.5; background: rgba(245,158,11,0.15); padding: 10px; border-radius: 8px; border-left: 3px solid #f59e0b;">
+                            <b>⚠️ 格式兼容提示：已自动绕过重复属性</b><br><br>
+                            Trime 底层的 C++ YAML 解析器非常宽容，如果遇到同名的键，通常不会报错，而是用后面的值覆盖前面的值，或者直接忽略。<br><br>
+                            而键盘工坊使用的是标准 JS 解析库（严格模式）。为了方便您使用，<b>工坊已自动为您忽略这些重复项并完成读取</b>。导出时将完美保留您的原文件格式。<br><br>
+                            如果遇极个别文件依然无法上传，请检查错误：<br>
+                            <a href="https://www.yamlvalidator.org/zh" target="_blank" style="color: #3b82f6; text-decoration: underline;">https://www.yamlvalidator.org/zh</a>
+                        </div>
+                    `;
+                    setTimeout(() => addChatMessage('system', warningMsg), 300); // 延迟300ms，让它跟在成功提示后面弹出
+                }
+
                 switchViewMode('phone');
             } catch (err) { 
                 console.error(err);
-                addChatMessage('system', `<span style="color:#ff4d4f;">❌ 解析失败</span><br>${err.message}`); 
+                addChatMessage('system', `<span style="color:#ff4d4f;">❌ 解析失败</span><br>抱歉，此文件包含无法自动修复的语法错误。<br><br>详情：${err.message.replace(/</g, '&lt;')} <br><br><a href="https://www.yamlvalidator.org/zh" target="_blank" style="color: #3b82f6; text-decoration: underline;">点击前往校验语法</a>`); 
             }
         };
         reader.readAsText(file); 
