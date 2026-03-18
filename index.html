@@ -255,7 +255,7 @@
         #mainCanvas:hover { box-shadow: 0 30px 70px rgba(255, 138, 107, 0.2), 0 0 0 2px rgba(255, 138, 107, 0.3); }
         #export-canvas { display: none; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-        /* 3D 悬浮设置面板 */
+
         .panel-3d {
             position: absolute; top: 20px; right: 20px;
             background: rgba(21, 26, 33, 0.85); backdrop-filter: blur(12px);
@@ -348,7 +348,28 @@
         </div>
     </div>
     <div class="controls" id="control-panel">
-        
+
+        <a href="https://ifdian.net/a/hero20072?tab=home" target="_blank" style="
+            display: flex; 
+            align-items: center; 
+            justify-content: flex-start; 
+            gap: 16px; 
+            margin-bottom: 20px; 
+            padding: 16px; 
+            background: linear-gradient(135deg, rgba(255, 138, 107, 0.12), rgba(255, 92, 53, 0.08)); 
+            border: 1px solid rgba(255, 138, 107, 0.4); 
+            border-radius: 14px; 
+            text-decoration: none; 
+            transition: all 0.3s cubic-bezier(0.2, 0.9, 0.3, 1);
+        " onmouseover="this.style.background='linear-gradient(135deg, rgba(255, 138, 107, 0.25), rgba(255, 92, 53, 0.15))'; this.style.boxShadow='0 8px 25px rgba(255, 138, 107, 0.25)'; this.style.transform='translateY(-3px)'; this.style.borderColor='rgba(255, 138, 107, 0.8)';" onmouseout="this.style.background='linear-gradient(135deg, rgba(255, 138, 107, 0.12), rgba(255, 92, 53, 0.08))'; this.style.boxShadow='none'; this.style.transform='translateY(0)'; this.style.borderColor='rgba(255, 138, 107, 0.4)';">
+            
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+                <span style="font-size: 0.8rem; color: #FFB88C; font-weight: 700; letter-spacing: 0.5px;">10类基础，80余种风格，150余项精调</span>
+                <span style="font-size: 0.95rem; color: #EFF3F8;">
+                    <b>键帽工坊桌面版</b>，释放你的键盘创造力，<span style="color: #FF8A6B; text-decoration: underline;">点击跳转。</span>
+                </span>
+            </div>
+        </a>
          <details id="sec-1" class="scroll-section">
             <summary><i class="fas fa-file-import icon-main"></i> 1. 原始数据</summary>
             <div class="detail-content">
