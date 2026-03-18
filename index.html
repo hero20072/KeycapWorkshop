@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>键帽工坊 - 测试</title>
+    <title>键帽工坊</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1272,6 +1272,7 @@ row.keys.forEach(k => {
         renderLayout.keys.push({
             name: k.click || k.label || 'key', 
             char: k.label ?? k.text ?? k.click ?? '', 
+            originalIndex: k.originalIndex,
             x: PADDING + px * HD_SCALE,
             y: PADDING + (TOOLBAR_H + py) * HD_SCALE, 
             w: pw * HD_SCALE, 
@@ -1418,17 +1419,17 @@ row.keys.forEach(k => {
             newCfg.bgColor = { r: Math.floor(rgb.r*0.8), g: Math.floor(rgb.g*0.8), b: Math.floor(rgb.b*0.8) };
             newCfg.sideColor = gColorHex;
             
-            newCfg.tc = '#FFFFFF';      // 文本纯白中心
-            newCfg.tsColor = rgba;      // 文本发光
+            newCfg.tc = '#FFFFFF'; 
+            newCfg.tsColor = rgba;   
             newCfg.tsBlur = gBlur / 2;
             
             newCfg.borderW = gWidth;
-            newCfg.borderC = '#FFFFFF'; // 边框白心
+            newCfg.borderC = '#FFFFFF';
             newCfg.borderOp = gOp;
             
-            newCfg.fSd = gOp * 1.5;     // 阴影不透明度
-            newCfg.fHl = 0;             // 关闭原本高光
-            newCfg.gBlur = gBlur;       // 覆盖模糊度
+            newCfg.fSd = gOp * 1.5;     
+            newCfg.fHl = 0;            
+            newCfg.gBlur = gBlur;      
         }
         return newCfg;
     }
@@ -1511,70 +1512,120 @@ row.keys.forEach(k => {
 
     document.getElementById('export-zip').onclick = async () => {
         if(renderLayout.keys.length === 0) { alert("没有可导出的按键，请确保已导入配置。"); return; }
+        
         const zip = new JSZip(); 
+        const bgFolder = zip.folder("backgrounds"); 
         const btn = document.getElementById('export-zip'); 
         btn.disabled = true; btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> 打包中...";
         
         try {
-            zip.file("示例.custom.yaml", ""); 
-            const eCanvas = document.getElementById('export-canvas'); const eCtx = eCanvas.getContext('2d');
-            
             const exportPad = parseInt(document.getElementById('export_pad').value) || 0;
+            const eCanvas = document.getElementById('export-canvas'); 
+            const eCtx = eCanvas.getContext('2d');
             const z = renderLayout.zones;
 
-            if (z.toolbar.h > 0) {
-                eCanvas.width = z.fullW; eCanvas.height = z.toolbar.h;
-                eCtx.clearRect(0, 0, eCanvas.width, eCanvas.height);
-                eCtx.drawImage(bgCanvas, PADDING, PADDING + z.toolbar.y, z.fullW, z.toolbar.h, 0, 0, z.fullW, z.toolbar.h);
-                const blob = await new Promise(r => eCanvas.toBlob(r, 'image/png'));
-                zip.file(`${currentSkinName}_toolbar_bg.png`, blob);
-            }
+            const scheme = currentColorScheme;
+            const layoutId = currentLayout;
+
+            let allSchemeVariables = {}; 
+            allSchemeVariables[scheme] = {};
+            let allLayoutKeyMaps = {};   
+            allLayoutKeyMaps[layoutId] = {};
+            let exportedKbBgFileName = null;
 
             if (z.main.h > 0) {
                 let kbHeight = z.main.h + z.padding.h;
                 eCanvas.width = z.fullW; eCanvas.height = kbHeight;
                 eCtx.clearRect(0, 0, eCanvas.width, eCanvas.height);
                 eCtx.drawImage(bgCanvas, PADDING, PADDING + z.main.y, z.fullW, kbHeight, 0, 0, z.fullW, kbHeight);
+                
+                exportedKbBgFileName = `${scheme}_${layoutId}_bg.png`;
                 const blob = await new Promise(r => eCanvas.toBlob(r, 'image/png'));
-                zip.file(`${currentSkinName}_keyboard_bg.png`, blob);
+                bgFolder.file(exportedKbBgFileName, blob);
             }
 
             for(let i=0; i<renderLayout.keys.length; i++) {
                 const key = renderLayout.keys[i];
+                const physicalIndex = key.originalIndex;
+                const humanIndex = physicalIndex + 1;
+                const varPrefix = `bg_${layoutId}_${humanIndex}`;
+
                 eCanvas.width = key.w + exportPad * 2; 
                 eCanvas.height = key.h + exportPad * 2; 
-                let safeName = String(key.name || 'key').replace(/[^a-zA-Z0-9_\u4e00-\u9fa5]/g, '');
-                let safeKeyId = `${safeName}_${i}`;
+
 
                 eCtx.clearRect(0,0, eCanvas.width, eCanvas.height);
                 eCtx.save(); 
                 eCtx.translate(exportPad, exportPad); 
                 drawFlat(eCtx, key, cfg); 
-                drawText(eCtx, key, cfg); 
+                
                 eCtx.restore();
                 
+                const normalFileName = `${scheme}_${layoutId}_${humanIndex}.png`;
                 const blobNormal = await new Promise(r => eCanvas.toBlob(r, 'image/png'));
-                zip.file(`${currentSkinName}_${safeKeyId}.png`, blobNormal);
+                bgFolder.file(normalFileName, blobNormal);
+
+
+                allSchemeVariables[scheme][varPrefix] = normalFileName;
+                if(!allLayoutKeyMaps[layoutId][physicalIndex]) allLayoutKeyMaps[layoutId][physicalIndex] = {};
+                allLayoutKeyMaps[layoutId][physicalIndex].normalVar = varPrefix;
 
                 const pressedCfg = getPressedConfig({ ...key, isPressed: true }, cfg);
                 eCtx.clearRect(0,0, eCanvas.width, eCanvas.height);
                 eCtx.save(); 
                 eCtx.translate(exportPad, exportPad); 
                 drawFlat(eCtx, key, pressedCfg); 
-                drawText(eCtx, key, pressedCfg); 
+                
                 eCtx.restore();
                 
+                const activeFileName = `${scheme}_${layoutId}_${humanIndex}_active.png`;
                 const blobActive = await new Promise(r => eCanvas.toBlob(r, 'image/png'));
-                zip.file(`${currentSkinName}_${safeKeyId}_active.png`, blobActive);
+                bgFolder.file(activeFileName, blobActive);
+
+
+                allSchemeVariables[scheme][`${varPrefix}_hl`] = activeFileName;
+                allLayoutKeyMaps[layoutId][physicalIndex].activeVar = `${varPrefix}_hl`;
+            }
+
+
+            let patchYaml = `# Rime custom patch\n# 适用于主题：${currentSkinName}\n\npatch:\n`;
+            patchYaml += `  # --------- 注入统一变量 --------- #\n`;
+            for (const [varName, fileName] of Object.entries(allSchemeVariables[scheme])) {
+                patchYaml += `  "preset_color_schemes/${scheme}/${varName}": "${fileName}"\n`;
+            }
+            patchYaml += `  "preset_color_schemes/${scheme}/back_color": 0x00ffffff\n`;
+            if (exportedKbBgFileName) {
+                patchYaml += `  "preset_color_schemes/${scheme}/keyboard_back_color": "${exportedKbBgFileName}"\n`;
+            }
+
+            patchYaml += `\n  # --------- 引用以上按键变量 --------- #\n`;
+            for (const [pIndex, vars] of Object.entries(allLayoutKeyMaps[layoutId])) {
+                if (vars.normalVar) patchYaml += `  "preset_keyboards/${layoutId}/keys/@${pIndex}/key_back_color": ${vars.normalVar}\n`;
+                if (vars.activeVar) patchYaml += `  "preset_keyboards/${layoutId}/keys/@${pIndex}/hilited_key_back_color": ${vars.activeVar}\n`;
+            }
+            zip.file(`${currentSkinName}.参考patch.custom.yaml`, patchYaml);
+
+            if (state.rawYamlText) {
+                const patcher = new YamlTextPatcher(state.rawYamlText);
+                patcher.patchColorScheme(scheme, { ...allSchemeVariables[scheme] }, exportedKbBgFileName);
+                patcher.patchKeyboardKeys(layoutId, allLayoutKeyMaps[layoutId]);
+                zip.file(`${currentSkinName}.trime.yaml`, patcher.toString());
             }
 
             const content = await zip.generateAsync({type: "blob"});
             const link = document.createElement('a'); 
             link.href = URL.createObjectURL(content); 
-            link.download = `${currentSkinName}_skin_demo.zip`; 
+            const now = new Date();
+            const tStr = String(now.getMonth()+1).padStart(2,'0') + String(now.getDate()).padStart(2,'0') + String(now.getHours()).padStart(2,'0') + String(now.getMinutes()).padStart(2,'0');
+            link.download = `${currentSkinName}_${tStr}.zip`; 
             link.click();
-        } catch(e) { console.error(e); alert("打包失败！"); } 
-        finally { btn.disabled = false; btn.innerHTML = '<i class="fas fa-file-zipper"></i> 打包导出'; }
+
+        } catch(e) { 
+            console.error(e); 
+            alert("打包失败：" + e.message); 
+        } finally { 
+            btn.disabled = false; btn.innerHTML = '<i class="fas fa-file-zipper"></i> 打包导出'; 
+        }
     };
 
     document.getElementById('export-png').onclick = () => {
@@ -1813,7 +1864,7 @@ row.keys.forEach(k => {
     window.onload = () => {
         changePhoneRatio(); updateLayout(); updateConfig();
         setTimeout(() => {
-            addChatMessage('left', '👋 欢迎体验键帽工坊！<br>（带 🔒 功能为待完善内容）。');
+            addChatMessage('left', '👋 欢迎体验键帽工坊！<br>（更多功能请使用桌面版）。');
         }, 500);
     };
 
@@ -1856,6 +1907,191 @@ document.querySelector('.controls').addEventListener('scroll', function() {
         }
     });
 });
+
+    class YamlTextPatcher {
+        constructor(rawText) { this.lines = rawText.split(/\r?\n/); }
+        getIndent(line) { const m = line.match(/^(\s*)/); return m ? m[1].length : 0; }
+
+        patchColorScheme(schemeName, variablesMap, kbBgFileName) {
+            let inSection = false; let schemeIndent = -1; let insertPos = -1; let propIndent = -1;
+            let foundBackColor = false; 
+            let foundKbBackColor = false; 
+
+            for (let i = 0; i < this.lines.length; i++) {
+                const line = this.lines[i];
+                if (line.trim().startsWith('#')) continue;
+                if (/^preset_color_schemes\s*:/.test(line)) { inSection = true; continue; }
+                
+                if (inSection) {
+                    const indent = this.getIndent(line);
+                    if (indent === 0 && line.trim() !== '') break; 
+                    if (new RegExp(`^\\s*${schemeName}\\s*:`).test(line)) {
+                        schemeIndent = indent; propIndent = schemeIndent + 2; insertPos = i + 1;
+                        continue;
+                    }
+                    if (schemeIndent !== -1) {
+                        if (indent <= schemeIndent) break; 
+                        
+                        const keyMatch = line.match(/^\s*([a-zA-Z0-9_]+)\s*:/);
+                        if (keyMatch) {
+                            const keyName = keyMatch[1];
+                            
+                            if (keyName === 'back_color') {
+                                this.lines[i] = `${' '.repeat(indent)}back_color: 0x00ffffff`;
+                                foundBackColor = true;
+                            } 
+                            else if (keyName === 'keyboard_back_color' && kbBgFileName) {
+                                this.lines[i] = `${' '.repeat(indent)}keyboard_back_color: "${kbBgFileName}"`;
+                                foundKbBackColor = true;
+                            }
+                            else if (variablesMap[keyName]) {
+                                this.lines[i] = `${' '.repeat(indent)}${keyName}: "${variablesMap[keyName]}"`;
+                                delete variablesMap[keyName];
+                            }
+                        }
+                        insertPos = i + 1; 
+                    }
+                }
+            }
+
+            if (insertPos !== -1) {
+                let injectLines = [];
+                for (const [vName, fName] of Object.entries(variablesMap)) {
+                    injectLines.push(`${' '.repeat(propIndent)}${vName}: "${fName}"`);
+                }
+                if (!foundBackColor) injectLines.push(`${' '.repeat(propIndent)}back_color: 0x00ffffff`);
+                if (!foundKbBackColor && kbBgFileName) injectLines.push(`${' '.repeat(propIndent)}keyboard_back_color: "${kbBgFileName}"`);
+                
+                if (injectLines.length > 0) this.lines.splice(insertPos, 0, ...injectLines);
+            }
+        }
+
+        patchKeyboardKeys(layoutName, keyImagesMap) {
+            let inSection = false; let inLayout = false; let inKeys = false;
+            let layoutIndent = -1; let listIndex = -1;
+            
+            let currentItemStartIdx = -1; let currentItemIndent = -1;
+            let foundBgInBlock = false; let foundHlInBlock = false;
+
+            const processEndOfBlock = (endIdx) => {
+                if (currentItemStartIdx !== -1 && keyImagesMap[listIndex]) {
+                    const { normalVar, activeVar } = keyImagesMap[listIndex];
+                    const alignIndent = currentItemIndent > 0 ? currentItemIndent : (this.getIndent(this.lines[currentItemStartIdx]) + 2);
+                    let insertArr = [];
+                    if (!foundHlInBlock && activeVar) insertArr.push(`${' '.repeat(alignIndent)}hilited_key_back_color: ${activeVar}`);
+                    if (!foundBgInBlock && normalVar) insertArr.push(`${' '.repeat(alignIndent)}key_back_color: ${normalVar}`);
+                    
+                    if (insertArr.length > 0) this.lines.splice(endIdx, 0, ...insertArr);
+                    return insertArr.length;
+                }
+                return 0;
+            };
+
+            for (let i = 0; i < this.lines.length; i++) {
+                const line = this.lines[i];
+                if (line.trim().startsWith('#')) continue;
+                if (/^preset_keyboards\s*:/.test(line)) { inSection = true; continue; }
+                
+                if (inSection) {
+                    const indent = this.getIndent(line);
+                    if (indent === 0 && line.trim() !== '') break;
+                    
+                    if (!inLayout && new RegExp(`^\\s*${layoutName}\\s*:`).test(line)) {
+                        inLayout = true; layoutIndent = indent; continue;
+                    }
+                    
+                    if (inLayout && !inKeys) {
+                        if (/^\s*keyboard_back_color\s*:/.test(line)) {
+                            this.lines[i] = `${' '.repeat(indent)}# keyboard_back_color 移至配色方案中以避免冲突`;
+                            continue;
+                        }
+                        if (/^\s*keys\s*:/.test(line)) { inKeys = true; continue; }
+                    }
+                    
+                    if (inKeys) {
+                        if (indent <= layoutIndent && line.trim() !== '') {
+                            if (currentItemStartIdx !== -1 && !this.lines[currentItemStartIdx].includes('{') && !/^\s*-\s*\*\w+/.test(this.lines[currentItemStartIdx])) {
+                                processEndOfBlock(i);
+                            }
+                            break;
+                        }
+                        
+                        if (/^\s*-\s/.test(line)) {
+                            if (currentItemStartIdx !== -1 && !this.lines[currentItemStartIdx].includes('{') && !/^\s*-\s*\*\w+/.test(this.lines[currentItemStartIdx])) {
+                                i += processEndOfBlock(i); 
+                            }
+
+                            listIndex++;
+                            currentItemStartIdx = i; foundBgInBlock = false; foundHlInBlock = false;
+
+                            if (keyImagesMap[listIndex]) {
+                                const { normalVar, activeVar } = keyImagesMap[listIndex];
+                                
+                                if (line.includes('{')) {
+                                    let newLine = this.lines[i];
+                                    const bgRegex = /(\bkey_back_color\s*:\s*)(?:"[^"]*"|'[^']*'|[^,}]+)/;
+                                    const hlRegex = /(\bhilited_key_back_color\s*:\s*)(?:"[^"]*"|'[^']*'|[^,}]+)/;
+
+                                    let hasBg = bgRegex.test(newLine); let hasHl = hlRegex.test(newLine);
+
+                                    if (hasBg && normalVar) newLine = newLine.replace(bgRegex, `$1${normalVar}`);
+                                    if (hasHl && activeVar) newLine = newLine.replace(hlRegex, `$1${activeVar}`);
+
+                                    let injectArr = [];
+                                    if (!hasBg && normalVar) injectArr.push(`key_back_color: ${normalVar}`);
+                                    if (!hasHl && activeVar) injectArr.push(`hilited_key_back_color: ${activeVar}`);
+
+                                    if (injectArr.length > 0) {
+                                        newLine = newLine.replace(/}(\s*(?:#.*)?)$/, function(match, comment) {
+                                            return `, ${injectArr.join(', ')} }${comment || ''}`;
+                                        });
+                                    }
+                                    this.lines[i] = newLine;
+                                    currentItemStartIdx = -1; 
+                                    
+                                } else if (/^\s*-\s*\*\w+/.test(line)) {
+                                    const alias = line.match(/\*(\w+)/)[0];
+                                    let injectStr = `{ <<: ${alias}`;
+                                    if(normalVar) injectStr += `, key_back_color: ${normalVar}`;
+                                    if(activeVar) injectStr += `, hilited_key_back_color: ${activeVar}`;
+                                    injectStr += ` }`;
+                                    this.lines[i] = line.replace(alias, injectStr);
+                                    currentItemStartIdx = -1;
+                                } else {
+                                    currentItemIndent = line.indexOf('-') + 2;
+                                    if (/(key_back_color\s*:)/.test(line) && normalVar) {
+                                        this.lines[i] = line.replace(/(key_back_color\s*:\s*)(?:"[^"]*"|'[^']*'|[^#\s]+)/, `$1${normalVar}`);
+                                        foundBgInBlock = true;
+                                    }
+                                    if (/(hilited_key_back_color\s*:)/.test(line) && activeVar) {
+                                        this.lines[i] = line.replace(/(hilited_key_back_color\s*:\s*)(?:"[^"]*"|'[^']*'|[^#\s]+)/, `$1${activeVar}`);
+                                        foundHlInBlock = true;
+                                    }
+                                }
+                            } else {
+                                currentItemStartIdx = -1;
+                            }
+                        } else if (currentItemStartIdx !== -1) {
+                            const { normalVar, activeVar } = keyImagesMap[listIndex];
+                            if (!foundBgInBlock && /(key_back_color\s*:)/.test(line) && normalVar) {
+                                this.lines[i] = line.replace(/(key_back_color\s*:\s*)(?:"[^"]*"|'[^']*'|[^#\s]+)/, `$1${normalVar}`);
+                                foundBgInBlock = true;
+                            }
+                            if (!foundHlInBlock && /(hilited_key_back_color\s*:)/.test(line) && activeVar) {
+                                this.lines[i] = line.replace(/(hilited_key_back_color\s*:\s*)(?:"[^"]*"|'[^']*'|[^#\s]+)/, `$1${activeVar}`);
+                                foundHlInBlock = true;
+                            }
+                            if (indent > 0) currentItemIndent = indent;
+                        }
+                    }
+                }
+            }
+            if (currentItemStartIdx !== -1 && !this.lines[currentItemStartIdx].includes('{') && !/^\s*-\s*\*\w+/.test(this.lines[currentItemStartIdx])) {
+                processEndOfBlock(this.lines.length);
+            }
+        }
+        toString() { return this.lines.join('\n'); }
+    }
 </script>
 </body>
 </html>
