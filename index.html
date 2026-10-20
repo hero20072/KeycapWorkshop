@@ -963,6 +963,8 @@
         }
     };
 
+    const defaultState = JSON.parse(JSON.stringify(state));
+
     let currentLayout = "default";
     let currentSkinName = "custom_skin";
     let currentColorScheme = "default";
@@ -1162,6 +1164,11 @@
     }
 
     function processYamlData(doc) {
+        state.style = { ...defaultState.style };
+        state.preset_keys = { ...defaultPresetKeys };
+        state.preset_keyboards = { ...defaultState.preset_keyboards };
+        currentSkinName = "custom_skin";
+        currentLayout = "default";
         if (doc.name) currentSkinName = String(doc.name || "custom_skin").replace(/[^a-zA-Z0-9_\u4e00-\u9fa5\-]/g, '');
         if (doc.preset_color_schemes) {
             state.preset_color_schemes = doc.preset_color_schemes;
@@ -1174,6 +1181,7 @@
         } else {
             state.preset_color_schemes = { "default": { name: "默认配色" } };
             currentColorScheme = "default";
+            document.getElementById('scheme-select').innerHTML = '<option value="default">默认配色</option>';
         }
 
         updateRawDataDisplay(doc);
@@ -1186,6 +1194,8 @@
                 sel.innerHTML += `<option value="${k}">${state.preset_keyboards[k].name || k}</option>`;
             });
             currentLayout = Object.keys(state.preset_keyboards)[0];
+        } else {
+            document.getElementById('layout-select').innerHTML = '<option value="default">默认布局 (内置)</option>';
         }
         isHDSynced = false;
         addChatMessage('system', '已重置为初始布局预览。调整下方参数可开启高清渲染。');
