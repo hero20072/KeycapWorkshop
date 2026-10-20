@@ -15,12 +15,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/geometries/RoundedBoxGeometry.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
 
 
     <style>
@@ -339,7 +333,7 @@
 </head>
 <body>
 
-    <div id="quick-scroll-nav" class="quick-scroll-nav">
+    <div class="quick-scroll-nav">
     <div class="nav-item active" data-target="sec-1" title="1. 原始数据">1</div>
     <div class="nav-item" data-target="sec-2" title="2. 添加图案">2</div>
     <div class="nav-item" data-target="sec-3" title="3. 键帽材质">3</div>
@@ -500,7 +494,7 @@
                         <option disabled>机械3D 🔒 (后期开放)</option>
                     </select>
                 </div>
-                <div class="ctrl-row" id="row_style_flat">
+                <div class="ctrl-row">
                     <label>风格</label>
                     <select id="c_style_flat" style="width:60%;" onchange="updateConfig()">
                         <option value="glass" selected>毛玻璃</option>
@@ -552,7 +546,7 @@
          <details id="sec-5" class="scroll-section">
             <summary><i class="fas fa-lightbulb icon-main"></i> 5. 颜色光影</summary>
             <div class="detail-content">
-                <div id="panel_flat_light" style="display:flex; flex-direction:column; gap:14px;">
+                <div style="display:flex; flex-direction:column; gap:14px;">
                     <div class="ctrl-row"><label>外高光</label>
                         <input type="range" id="c_flat_hl" min="0" max="100" value="20"><span class="val-disp"></span></div>
                     <div class="ctrl-row"><label>外阴影</label>
@@ -673,7 +667,7 @@
                     </select>
                 </div>
 
-                <div id="panel_pressed_glow" style="display:flex; flex-direction:column; gap:4px;">
+                <div style="display:flex; flex-direction:column; gap:4px;">
                     <div class="ctrl-row">
                         <label>荧光颜色</label>
                         <input type="color" id="pressed_glow_color" value="#00FFFF" onchange="updateConfig()">
@@ -783,9 +777,7 @@
                 <span>⚙️</span>
                 <span>▾</span>
             </div>
-            <div id="global-keyboard-container">
-                <div id="global-keyboard-viewport"></div>
-            </div>
+            <div id="global-keyboard-container"></div>
         </div>
     </div>
 
@@ -955,8 +947,7 @@
             horizontal_gap: 6, 
             key_height: 44, 
             round_corner: 8, 
-            key_text_size: 20, 
-            auto_height_index: -1 
+            key_text_size: 20
         },
         preset_keys: defaultPresetKeys,
         preset_keyboards: {
@@ -981,7 +972,7 @@
     const HD_SCALE = 1400 / 375;   
 
     const canvas = document.getElementById('mainCanvas');
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    const ctx = canvas.getContext('2d');
     let sourceImg = null;
     let bgCanvas = document.createElement('canvas'); let bgCtx = bgCanvas.getContext('2d');
     let keyBgCanvas = document.createElement('canvas'); let keyBgCtx = keyBgCanvas.getContext('2d');
@@ -1396,8 +1387,6 @@ row.keys.forEach(k => {
         document.querySelectorAll('input[type="range"]').forEach(el => { if(el.nextElementSibling) el.nextElementSibling.innerText = el.value; });
 
         cfg = {
-            type: 'flat',
-            fStyle: 'glass', 
             rt: getV('c_rt'), rb: getV('c_rb'), 
             borderW: getV('c_border_w'), borderC: getC('c_border_c'), borderOp: getV('c_border_op') / 100,
             bgColor: hexToRgb(getC('c_base_color')), 
@@ -1477,7 +1466,6 @@ row.keys.forEach(k => {
             newCfg.isGlowMode = true;
             newCfg.customShadowColor = rgba;
             newCfg.bgColor = { r: Math.floor(rgb.r*0.8), g: Math.floor(rgb.g*0.8), b: Math.floor(rgb.b*0.8) };
-            newCfg.sideColor = gColorHex;
             
             newCfg.tc = '#FFFFFF'; 
             newCfg.tsColor = rgba;   
@@ -1515,7 +1503,6 @@ row.keys.forEach(k => {
         const shadowColor = currentCfg.isGlowMode ? currentCfg.customShadowColor : `rgba(0,0,0,${currentCfg.fSd})`;
         tCtx.shadowColor = shadowColor; 
         tCtx.shadowBlur = currentCfg.isGlowMode ? currentCfg.gBlur * 1.5 : 20; 
-        tCtx.shadowOffsetX = currentCfg.isGlowMode ? 0 : 0;
         tCtx.shadowOffsetY = currentCfg.isGlowMode ? 0 : 10;
 
         pathRoundRect(tCtx, 0, 0, key.w, key.h, currentCfg.rt, currentCfg.rb); 
